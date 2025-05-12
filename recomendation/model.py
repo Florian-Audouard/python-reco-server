@@ -18,7 +18,7 @@ class Model(ABC):
     Abstract base class for recomendation models.
     """
 
-    def __init__(self):
+    def __init__(self, force_training=False):
         """
         Initialize the model with default values.
         """
@@ -33,6 +33,7 @@ class Model(ABC):
         self.filename = None
         self.min = None
         self.max = None
+        self.force_training = force_training
 
     @get_time_func
     def init_data(self, data):
@@ -73,9 +74,14 @@ class Model(ABC):
         Load the model from a file
         """
         full_path = self.get_full_path()
-
+        train = False
         if not os.path.exists(full_path):
             log.error(f"File {full_path} does not exist")
+            train = True
+        if self.force_training:
+            log.info("Force training mode")
+            train = True
+        if train:
             self.training_save()
 
     @abstractmethod
@@ -120,16 +126,11 @@ class Model(ABC):
             The prediction set
         """
 
-    def testing_main(self, folder, training):
+    def testing_main(self, folder):
         # Exemple d'utilisation
         data = load_data(f"ml-{folder}m")
         self.init_data(data)
-        if training:
-            log.info("Training MODE")
-            self.training_save()
-        else:
-            log.info("Loading MODE")
-            self.load()
+        self.load()
         recommendations = self.predict(user_id=1, top_n=5)
         print(recommendations)
         accuracy = self.accuracy()

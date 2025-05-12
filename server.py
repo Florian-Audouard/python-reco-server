@@ -7,10 +7,11 @@ from recomendation.preprocessing.movie_manipulation import load_data
 app = FastAPI()
 
 folder = "0.1"
+FORCE_TRAINING = False
 
 data = load_data(f"ml-{folder}m")
 
-algo = SVDRecommender()
+algo = SVDRecommender(FORCE_TRAINING)
 algo.init_data(data)
 algo.load()
 

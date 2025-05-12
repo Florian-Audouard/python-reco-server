@@ -53,8 +53,8 @@ class NCF(nn.Module):
 
 
 class DeepRecommender(Model):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, force_training):
+        super().__init__(force_training)
         self.model = None
         self.filename = "deep_recommender.pt"
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -137,5 +137,5 @@ class DeepRecommender(Model):
 
 
 if __name__ == "__main__":
-    recommender = DeepRecommender()
-    recommender.testing_main("0.1", FORCE_TRAINING)
+    recommender = DeepRecommender(FORCE_TRAINING)
+    recommender.testing_main("0.1")

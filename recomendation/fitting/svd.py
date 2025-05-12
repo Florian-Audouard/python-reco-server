@@ -12,7 +12,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from model import Model
 
 
-FORCE_TRAINING = True
+FORCE_TRAINING = False
 
 
 class SVDRecommender(Model):
@@ -20,8 +20,8 @@ class SVDRecommender(Model):
     SVDRecommender is a recommendation system model based on Singular Value Decomposition (SVD).
     """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, force_training):
+        super().__init__(force_training)
         self.model = None
         self.filename = "svd_model.joblib"
 
@@ -92,5 +92,5 @@ class SVDRecommender(Model):
 
 if __name__ == "__main__":
     # Exemple d'utilisation
-    recommender = SVDRecommender()
+    recommender = SVDRecommender(FORCE_TRAINING)
     recommender.testing_main("0.1", FORCE_TRAINING)
