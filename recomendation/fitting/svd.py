@@ -22,15 +22,15 @@ class SVDRecommender(Model):
 
     def __init__(self):
         super().__init__()
-        self.algo = None
+        self.model = None
         self.filename = "svd_model.joblib"
 
     def training(self):
         """
         Train the SVD model using the initialized data
         """
-        self.algo = SVD()
-        self.algo.fit(self.trainset)
+        self.model = SVD()
+        self.model.fit(self.trainset)
 
     def save(self):
         """
@@ -38,12 +38,12 @@ class SVDRecommender(Model):
         Args:
             filepath (str): Path where to save the model
         """
-        if self.algo is None:
+        if self.model is None:
             raise RuntimeError("Model not initialized or trained")
 
         # Create directory if it doesn't exist
         os.makedirs(self.data_dir, exist_ok=True)
-        joblib.dump(self.algo, self.get_full_path())
+        joblib.dump(self.model, self.get_full_path())
 
     def load(self):
         """
@@ -52,7 +52,7 @@ class SVDRecommender(Model):
             filepath (str): Path to the saved model file
         """
         super().load()
-        self.algo = joblib.load(self.get_full_path())
+        self.model = joblib.load(self.get_full_path())
 
     def predict(self, user_id, top_n):
         """
@@ -64,7 +64,7 @@ class SVDRecommender(Model):
         Returns:
             list: List of (title, score) tuples, sorted by descending score
         """
-        if self.algo is None:
+        if self.model is None:
             raise RuntimeError("Model not initialized or trained")
 
         watched = self.ratings[self.ratings["userId"] == user_id]["movieId"].values
@@ -74,7 +74,7 @@ class SVDRecommender(Model):
         for _, row in candidates.iterrows():
             movie_id = row["movieId"]
 
-            pred_rating = self.algo.predict(user_id, movie_id).est
+            pred_rating = self.model.predict(user_id, movie_id).est
 
             results.append((row["title"], pred_rating))
 
@@ -87,7 +87,7 @@ class SVDRecommender(Model):
         Returns:
             list: List of (user_id, movie_id, actual_rating) tuples
         """
-        return self.algo.test(self.validation_set)
+        return self.model.test(self.validation_set)
 
 
 if __name__ == "__main__":
