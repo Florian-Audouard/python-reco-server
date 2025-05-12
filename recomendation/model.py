@@ -31,6 +31,8 @@ class Model(ABC):
         self.script_dir = os.path.dirname(os.path.abspath(__file__))
         self.data_dir = os.path.join(self.script_dir, "data")
         self.filename = None
+        self.min = None
+        self.max = None
 
     @get_time_func
     def init_data(self, data):
@@ -42,9 +44,9 @@ class Model(ABC):
         self.movies, self.ratings, self.tags = data
         self.movies_merged = group_data(self.movies, self.tags)
         # Convert ratings DataFrame to Surprise dataset
-        reader = Reader(
-            rating_scale=(self.ratings["rating"].min(), self.ratings["rating"].max())
-        )
+        self.min = self.ratings["rating"].min()
+        self.max = self.ratings["rating"].max()
+        reader = Reader(rating_scale=(self.min, self.max))
         data = Dataset.load_from_df(
             self.ratings[["userId", "movieId", "rating"]], reader
         )
@@ -107,6 +109,8 @@ class Model(ABC):
         Returns:
             Predictions made by the model
         """
+        if self.movies_merged is None:
+            raise RuntimeError("Model not initialized or trained")
 
     @abstractmethod
     def get_prediction_set(self):
@@ -131,20 +135,21 @@ class Model(ABC):
         accuracy = self.accuracy()
         print(accuracy)
 
-    def accuracy(self, k=100, threshold=0.5):
+    def accuracy(self, k=10):
         """
         Calculate the accuracy of the model's predictions
 
         Returns:
             float: Accuracy score
         """
+        threshold = (self.max - self.min) / 2
         predictions = self.get_prediction_set()
         user_est_true = defaultdict(list)
         for pred in predictions:
             user_est_true[pred.uid].append((pred.iid, pred.est, pred.r_ui))
 
-        precisions = {}
-        recalls = {}
+        precisions = dict()
+        recalls = dict()
 
         for uid, user_ratings in user_est_true.items():
             user_est_true[uid] = sorted(user_ratings, key=lambda x: x[1], reverse=True)
@@ -154,7 +159,8 @@ class Model(ABC):
             relevant = sum((true_r >= threshold) for (_, _, true_r) in user_ratings)
             recommended = sum((est >= threshold) for (_, est, _) in top_k)
             relevant_and_recommended = sum(
-                (true_r >= threshold) for (_, est, true_r) in top_k
+                ((true_r >= threshold) and (est >= threshold))
+                for (_, est, true_r) in top_k
             )
 
             precisions[uid] = (
@@ -168,8 +174,8 @@ class Model(ABC):
         f1 = 2 * (avg_precision * avg_recall) / (avg_precision + avg_recall)
 
         return {
-            "rmse": rmse(predictions),
-            "mae": mae(predictions),
+            "rmse": rmse(predictions, verbose=False),
+            "mae": mae(predictions, verbose=False),
             "precision": avg_precision,
             "recall": avg_recall,
             "F1": f1,

@@ -12,7 +12,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from model import Model
 
 
-TRAINING = False
+FORCE_TRAINING = True
 
 
 class SVDRecommender(Model):
@@ -93,4 +93,4 @@ class SVDRecommender(Model):
 if __name__ == "__main__":
     # Exemple d'utilisation
     recommender = SVDRecommender()
-    recommender.testing_main("0.1", TRAINING)
+    recommender.testing_main("0.1", FORCE_TRAINING)
