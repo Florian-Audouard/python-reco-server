@@ -18,7 +18,7 @@ class Model(ABC):
     Abstract base class for recomendation models.
     """
 
-    def __init__(self, force_training=False):
+    def __init__(self, production=False, force_training=False):
         """
         Initialize the model with default values.
         """
@@ -34,6 +34,7 @@ class Model(ABC):
         self.min = None
         self.max = None
         self.force_training = force_training
+        self.production = production
 
     @get_time_func
     def init_data(self, data):
@@ -53,6 +54,9 @@ class Model(ABC):
         )
 
         # Split the data into trainset and validation set
+        if self.production:
+            self.trainset = data.build_full_trainset()
+            return
         self.trainset, self.validation_set = train_test_split(data, test_size=0.2)
 
     def get_full_path(self):
@@ -132,7 +136,9 @@ class Model(ABC):
         self.init_data(data)
         self.load()
         recommendations = self.predict(user_id=1, top_n=5)
+        recommendations2 = self.predict(user_id=10, top_n=5)
         print(recommendations)
+        print(recommendations2)
         accuracy = self.accuracy()
         print(accuracy)
 
