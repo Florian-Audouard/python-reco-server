@@ -80,13 +80,15 @@ class Model(ABC):
         full_path = self.get_full_path()
         train = False
         if not os.path.exists(full_path):
-            log.error(f"File {full_path} does not exist")
+            log.error("File %s does not exist", full_path)
             train = True
         if self.force_training:
             log.info("Force training mode")
             train = True
         if train:
             self.training_save()
+            return
+        log.info("Loading model from %s", full_path)
 
     @abstractmethod
     @get_time_func
@@ -109,8 +111,18 @@ class Model(ABC):
         self.save()
 
     @abstractmethod
+    def predict(self, user_id, list_movie_id):
+        """
+        Predict the rating for a given user and a list of movie
+        Args:
+            user_id: User ID
+            list_movie_id: Movie ID list
+        Returns:
+            Predicted rating for each movie
+        """
+
     @get_time_func
-    def predict(self, user_id, top_n):
+    def get_recommendations(self, user_id, top_n):
         """
         Make predictions using the trained model
         Args:
@@ -120,7 +132,15 @@ class Model(ABC):
             Predictions made by the model
         """
         if self.movies_merged is None:
-            raise RuntimeError("Model not initialized or trained")
+            raise RuntimeError("Data not initialized")
+
+        watched = self.ratings[self.ratings["userId"] == user_id]["movieId"].values
+        candidates = self.movies_merged[~self.movies_merged["movieId"].isin(watched)]
+
+        results = self.predict(user_id, candidates)
+
+        results.sort(key=lambda x: x[1], reverse=True)
+        return results[:top_n]
 
     @abstractmethod
     def get_prediction_set(self):
@@ -135,10 +155,10 @@ class Model(ABC):
         data = load_data(f"ml-{folder}m")
         self.init_data(data)
         self.load()
-        recommendations = self.predict(user_id=1, top_n=5)
-        recommendations2 = self.predict(user_id=10, top_n=5)
-        print(recommendations)
-        print(recommendations2)
+        recommendations = self.get_recommendations(user_id=2, top_n=5)
+        recommendations2 = self.get_recommendations(user_id=10, top_n=5)
+        print("reco 1: ", recommendations)
+        print("reco 2: ", recommendations2)
         accuracy = self.accuracy()
         print(accuracy)
 

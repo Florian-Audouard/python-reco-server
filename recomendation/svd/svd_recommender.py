@@ -54,22 +54,15 @@ class SVDRecommender(Model):
         super().load()
         self.model = joblib.load(self.get_full_path())
 
-    def predict(self, user_id, top_n):
+    def predict(self, user_id, candidates):
         """
-        Generate hybrid recommendations for a given user
+        Predict the rating for a given user and movie
         Args:
             user_id (int): ID of the target user
-            top_n (int): Number of recommendations to return
-            alpha (float): Weight between collaborative (alpha) and content (1-alpha)
+            candidates (list): list of candidate movies
         Returns:
-            list: List of (title, score) tuples, sorted by descending score
+            float: Predicted rating
         """
-        if self.model is None:
-            raise RuntimeError("Model not initialized or trained")
-
-        watched = self.ratings[self.ratings["userId"] == user_id]["movieId"].values
-        candidates = self.movies_merged[~self.movies_merged["movieId"].isin(watched)]
-
         results = []
         for _, row in candidates.iterrows():
             movie_id = row["movieId"]
@@ -78,8 +71,21 @@ class SVDRecommender(Model):
 
             results.append((row["title"], pred_rating))
 
-        results.sort(key=lambda x: x[1], reverse=True)
-        return results[:top_n]
+        return results
+
+    def get_recommendations(self, user_id, top_n):
+        """
+        Generate hybrid recommendations for a given user
+        Args:
+            user_id (int): ID of the target user
+            top_n (int): Number of recommendations to return
+        Returns:
+            list: List of (title, score) tuples, sorted by descending score
+        """
+        if self.model is None:
+            raise RuntimeError("Model not initialized or trained")
+
+        return super().get_recommendations(user_id, top_n)
 
     def get_prediction_set(self):
         """

@@ -33,4 +33,4 @@ def get_recommendations(user_id: int, top_n: int = Query(..., gt=0)):
         List of recommended items
     """
     print(f"Getting recommendations for user {user_id} with top_n={top_n}")
-    return algo.predict(user_id=user_id, top_n=top_n)
+    return algo.get_recommendations(user_id=user_id, top_n=top_n)

@@ -15,7 +15,7 @@ from surprise import Prediction
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from model import Model
 
-FORCE_TRAINING = False
+FORCE_TRAINING = True
 
 
 class NCFDataset(Dataset):
@@ -101,11 +101,9 @@ class DeepRecommender(Model):
         )
         self.model.eval()
 
-    def predict(self, user_id, top_n):
+    def predict(self, user_id, candidates):
         if self.model is None:
             raise RuntimeError("Model not initialized or trained")
-        watched = self.ratings[self.ratings["userId"] == user_id]["movieId"].values
-        candidates = self.movies_merged[~self.movies_merged["movieId"].isin(watched)]
         user_tensor = torch.tensor([user_id] * len(candidates), dtype=torch.long).to(
             self.device
         )
@@ -116,8 +114,13 @@ class DeepRecommender(Model):
             scores = self.model(user_tensor, item_tensor).cpu().numpy()
         candidates = candidates.copy()
         candidates["score"] = scores
-        top_movies = candidates.sort_values("score", ascending=False).head(top_n)
-        return list(zip(top_movies["title"], top_movies["score"]))
+        res = list(zip(candidates["title"], candidates["score"]))
+        return res
+
+    def get_recommendations(self, user_id, top_n):
+        if self.model is None:
+            raise RuntimeError("Model not initialized or trained")
+        return super().get_recommendations(user_id, top_n)
 
     def get_prediction_set(self):
         if self.model is None:
@@ -137,5 +140,5 @@ class DeepRecommender(Model):
 
 
 if __name__ == "__main__":
-    recommender = DeepRecommender(True, FORCE_TRAINING)
+    recommender = DeepRecommender(False, FORCE_TRAINING)
     recommender.testing_main("0.1")
