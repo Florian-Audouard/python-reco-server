@@ -15,7 +15,7 @@ from surprise import Prediction
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from model import Model
 
-FORCE_TRAINING = True
+FORCE_TRAINING = False
 
 
 class NCFDataset(Dataset):
@@ -114,7 +114,7 @@ class DeepRecommender(Model):
             scores = self.model(user_tensor, item_tensor).cpu().numpy()
         candidates = candidates.copy()
         candidates["score"] = scores
-        res = list(zip(candidates["title"], candidates["score"]))
+        res = list(zip(candidates["movieId"], candidates["score"]))
         return res
 
     def get_recommendations(self, user_id, top_n):
