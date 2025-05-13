@@ -1,0 +1,11 @@
+#server
+fastapi
+uvicorn
+
+#model
+numpy<2
+scikit-surprise
+pandas
+
+#deeplearning
+torch
