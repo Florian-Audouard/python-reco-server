@@ -12,7 +12,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from model import Model
 
 
-FORCE_TRAINING = False
+FORCE_TRAINING = True
 
 
 class SVDRecommender(Model):
@@ -25,7 +25,7 @@ class SVDRecommender(Model):
         self.model = None
         self.filename = "svd_model.joblib"
 
-    def training(self):
+    def training_impl(self):
         """
         Train the SVD model using the initialized data
         """
@@ -45,13 +45,12 @@ class SVDRecommender(Model):
         os.makedirs(self.data_dir, exist_ok=True)
         joblib.dump(self.model, self.get_full_path())
 
-    def load(self):
+    def load_impl(self):
         """
         Load a trained SVD model from a file
         Args:
             filepath (str): Path to the saved model file
         """
-        super().load()
         self.model = joblib.load(self.get_full_path())
 
     def predict(self, user_id, candidates):
