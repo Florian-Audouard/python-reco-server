@@ -1,7 +1,7 @@
 import os
 import sys
 from abc import ABC, abstractmethod
-from preprocessing.movie_manipulation import group_data, load_data
+from preprocessing.movie_manipulation import load_data
 from surprise import Dataset, Reader
 from surprise.model_selection import train_test_split
 from surprise.accuracy import rmse, mae
@@ -25,7 +25,6 @@ class Model(ABC):
         self.movies = None
         self.ratings = None
         self.tags = None
-        self.movies_merged = None
         self.trainset = None
         self.validation_set = None
         self.script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -37,14 +36,13 @@ class Model(ABC):
         self.production = production
 
     @get_time_func
-    def init_data(self, data):
+    def init_data(self, ratings):
         """
         Initialize the model with data
         Args:
             data (tuple): Tuple containing (movies, ratings, tags) DataFrames
         """
-        self.movies, self.ratings, self.tags = data
-        self.movies_merged = group_data(self.movies, self.tags)
+        self.ratings = ratings
         # Convert ratings DataFrame to Surprise dataset
         self.min = self.ratings["rating"].min()
         self.max = self.ratings["rating"].max()
@@ -143,12 +141,10 @@ class Model(ABC):
         Returns:
             Predictions made by the model
         """
-        if self.movies_merged is None:
+        if self.ratings is None:
             raise RuntimeError("Data not initialized")
 
-        watched = self.ratings[self.ratings["userId"] == user_id]["movieId"].values
-        candidates = self.movies_merged[~self.movies_merged["movieId"].isin(watched)]
-
+        candidates = self.ratings[self.ratings["userId"] != user_id]["movieId"].unique()
         results = self.predict(user_id, candidates)
 
         results.sort(key=lambda x: x[1], reverse=True)
@@ -167,7 +163,8 @@ class Model(ABC):
         data = load_data(f"ml-{folder}m")
         self.init_data(data)
         self.load()
-        self.get_recommendations(user_id=2, top_n=5)
+        res = self.get_recommendations(user_id=2, top_n=5)
+        print(res)
         accuracy = self.accuracy()
         for key, value in accuracy.items():
             log.info("%s: %s", key, value)

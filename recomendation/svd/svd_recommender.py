@@ -63,9 +63,7 @@ class SVDRecommender(Model):
             float: Predicted rating
         """
         results = []
-        for _, row in candidates.iterrows():
-            movie_id = row["movieId"]
-
+        for movie_id in candidates:
             pred_rating = self.model.predict(user_id, movie_id).est
 
             results.append((movie_id, pred_rating))

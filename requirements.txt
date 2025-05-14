@@ -1,6 +1,7 @@
 #server
 fastapi
 uvicorn
+python-multipart
 
 #model
 numpy<2

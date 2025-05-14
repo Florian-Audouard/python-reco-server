@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, File, UploadFile
 
 
 from recomendation.svd.svd_recommender import SVDRecommender
@@ -34,3 +34,10 @@ def get_recommendations(user_id: int, top_n: int = Query(..., gt=0)):
     """
     print(f"Getting recommendations for user {user_id} with top_n={top_n}")
     return algo.get_recommendations(user_id=user_id, top_n=top_n)
+
+
+@app.post("/upload/")
+async def upload_file(file: UploadFile = File(...)):
+    # Read the file contents (optional)
+    contents = await file.read()
+    print(f"File contents: {contents[:100]}...")
