@@ -66,7 +66,7 @@ class SVDRecommender(Model):
         for movie_id in candidates:
             pred_rating = self.model.predict(user_id, movie_id).est
 
-            results.append((movie_id, pred_rating))
+            results.append((int(movie_id), float(pred_rating)))
 
         return results
 

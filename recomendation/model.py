@@ -22,9 +22,7 @@ class Model(ABC):
         """
         Initialize the model with default values.
         """
-        self.movies = None
         self.ratings = None
-        self.tags = None
         self.trainset = None
         self.validation_set = None
         self.script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -141,10 +139,11 @@ class Model(ABC):
         Returns:
             Predictions made by the model
         """
-        if self.ratings is None:
+        if self.trainset is None:
             raise RuntimeError("Data not initialized")
 
         candidates = self.ratings[self.ratings["userId"] != user_id]["movieId"].unique()
+
         results = self.predict(user_id, candidates)
 
         results.sort(key=lambda x: x[1], reverse=True)
@@ -163,8 +162,7 @@ class Model(ABC):
         data = load_data(f"ml-{folder}m")
         self.init_data(data)
         self.load()
-        res = self.get_recommendations(user_id=2, top_n=5)
-        print(res)
+        self.get_recommendations(user_id=2, top_n=5)
         accuracy = self.accuracy()
         for key, value in accuracy.items():
             log.info("%s: %s", key, value)
