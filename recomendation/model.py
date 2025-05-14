@@ -72,43 +72,16 @@ class Model(ABC):
         """
 
     @abstractmethod
-    @get_time_func
-    def load(self):
+    def load_impl(self):
         """
-        Load the model from a file
+        function called when loading the model
         """
-        full_path = self.get_full_path()
-        train = False
-        if not os.path.exists(full_path):
-            log.error("File %s does not exist", full_path)
-            train = True
-        if self.force_training:
-            log.info("Force training mode")
-            train = True
-        if train:
-            self.training_save()
-            return
-        log.info("Loading model from %s", full_path)
 
     @abstractmethod
-    @get_time_func
-    def training(self):
+    def training_impl(self):
         """
         Train the model on the given data
         """
-        if self.filename is None:
-            raise RuntimeError("Filename not set")
-
-    @get_time_func
-    def training_save(self):
-        """
-        Train the model on the given data
-        and save the model to a file
-        """
-        if self.trainset is None:
-            raise RuntimeError("Model not initialized or trained")
-        self.training()
-        self.save()
 
     @abstractmethod
     def predict(self, user_id, list_movie_id):
@@ -120,6 +93,45 @@ class Model(ABC):
         Returns:
             Predicted rating for each movie
         """
+
+    @get_time_func
+    def load(self):
+        """
+        Load the model from a file
+        """
+        full_path = self.get_full_path()
+        train = False
+        if not os.path.exists(full_path):
+            log.error("File %s does not exist", full_path)
+            train = True
+        if self.force_training:
+            log.info("FORCE TRAINING MODE")
+            train = True
+        if train:
+            self.training_save()
+            return
+
+        log.info("LOADING FROM %s", full_path)
+        self.load_impl()
+
+    @get_time_func
+    def training(self):
+        """
+        Train the model on the given data
+        """
+        if self.trainset is None:
+            raise RuntimeError("Model not initialized or trained")
+        self.training_impl()
+
+    def training_save(self):
+        """
+        Train the model on the given data
+        and save the model to a file
+        """
+        if self.trainset is None:
+            raise RuntimeError("Model not initialized or trained")
+        self.training()
+        self.save()
 
     @get_time_func
     def get_recommendations(self, user_id, top_n):
@@ -155,12 +167,10 @@ class Model(ABC):
         data = load_data(f"ml-{folder}m")
         self.init_data(data)
         self.load()
-        recommendations = self.get_recommendations(user_id=2, top_n=5)
-        recommendations2 = self.get_recommendations(user_id=10, top_n=5)
-        print("reco 1: ", recommendations)
-        print("reco 2: ", recommendations2)
+        self.get_recommendations(user_id=2, top_n=5)
         accuracy = self.accuracy()
-        print(accuracy)
+        for key, value in accuracy.items():
+            log.info("%s: %s", key, value)
 
     def accuracy(self, k=10):
         """

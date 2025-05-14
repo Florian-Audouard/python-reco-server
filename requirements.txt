@@ -6,6 +6,3 @@ uvicorn
 numpy<2
 scikit-surprise
 pandas
-
-#deeplearning
-#torch

@@ -15,7 +15,7 @@ from surprise import Prediction
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from model import Model
 
-FORCE_TRAINING = True
+FORCE_TRAINING = False
 
 
 class NCFDataset(Dataset):
@@ -61,7 +61,7 @@ class DeepRecommender(Model):
         self.num_users = None
         self.num_items = None
 
-    def training(self, epochs=5, batch_size=256, lr=0.001):
+    def training_impl(self, epochs=5, batch_size=256, lr=0.001):
         self.num_users = int(self.ratings["userId"].max())
         self.num_items = int(self.ratings["movieId"].max())
         self.model = NCF(self.num_users, self.num_items).to(self.device)
@@ -92,7 +92,7 @@ class DeepRecommender(Model):
         os.makedirs(self.data_dir, exist_ok=True)
         torch.save(self.model.state_dict(), self.get_full_path())
 
-    def load(self):
+    def load_impl(self):
         self.num_users = int(self.ratings["userId"].max())
         self.num_items = int(self.ratings["movieId"].max())
         self.model = NCF(self.num_users, self.num_items).to(self.device)
@@ -114,7 +114,7 @@ class DeepRecommender(Model):
             scores = self.model(user_tensor, item_tensor).cpu().numpy()
         candidates = candidates.copy()
         candidates["score"] = scores
-        res = list(zip(candidates["title"], candidates["score"]))
+        res = list(zip(candidates["movieId"], candidates["score"]))
         return res
 
     def get_recommendations(self, user_id, top_n):
