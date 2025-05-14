@@ -1,7 +1,6 @@
 import os
 import sys
 from abc import ABC, abstractmethod
-from preprocessing.movie_manipulation import load_data
 from surprise import Dataset, Reader
 from surprise.model_selection import train_test_split
 from surprise.accuracy import rmse, mae
@@ -157,9 +156,8 @@ class Model(ABC):
             The prediction set
         """
 
-    def testing_main(self, folder):
+    def testing_main(self, data):
         # Exemple d'utilisation
-        data = load_data(f"ml-{folder}m")
         self.init_data(data)
         self.load()
         self.get_recommendations(user_id=2, top_n=5)

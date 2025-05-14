@@ -10,9 +10,11 @@ import joblib
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from model import Model
+from preprocessing.movie_manipulation import load_data
 
 
 FORCE_TRAINING = True
+FOLDER_SET = "0.1"
 
 
 class SVDRecommender(Model):
@@ -96,4 +98,5 @@ class SVDRecommender(Model):
 if __name__ == "__main__":
     # Exemple d'utilisation
     recommender = SVDRecommender(False, FORCE_TRAINING)
-    recommender.testing_main("0.1")
+    data = load_data(f"ml-{FOLDER_SET}m")
+    recommender.testing_main(data)

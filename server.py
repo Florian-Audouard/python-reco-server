@@ -5,6 +5,7 @@ from recomendation.svd.svd_recommender import SVDRecommender
 from recomendation.preprocessing.movie_manipulation import load_data
 from io import StringIO
 from fastapi.responses import JSONResponse
+import requests
 
 app = FastAPI()
 
@@ -14,9 +15,37 @@ PRODUCTION = True
 
 ALGORITHM = SVDRecommender
 algo = None
-algo = ALGORITHM(FORCE_TRAINING, folder)
-algo.init_data(load_data(f"ml-{folder}m"))
-algo.load()
+
+
+def init_algo(data):
+    """
+    Initialize the algorithm
+    """
+    global algo
+    algo = ALGORITHM(FORCE_TRAINING, folder)
+    algo.init_data(data)
+    algo.load()
+
+
+def init_algo_from_file():
+    """
+    Initialize the algorithm from a file
+    """
+    data = load_data(f"ml-{folder}m")
+    init_algo(data)
+
+
+def init_algo_from_url():
+    """
+    Initialize the algorithm from a URL
+    """
+    url = "http://localhost:8080/rating/file"
+    response = requests.get(url, timeout=20)
+    data = pd.read_csv(StringIO(response.text))
+    init_algo(data)
+
+
+init_algo_from_url()
 
 
 class AlgorithmNotInitialized(Exception):
