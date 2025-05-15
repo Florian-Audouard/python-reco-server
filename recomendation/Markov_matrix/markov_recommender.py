@@ -76,7 +76,7 @@ class MarkovRecommender(Model):
             list: List of (title, score) tuples, sorted by descending score
         """
         if self.model is None:
-            raise RuntimeError("Model not initialized or trained")
+            raise RuntimeError(self.ERROR_MESSAGE)
 
         return super().get_recommendations(user_id, top_n)
         
