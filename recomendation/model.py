@@ -16,6 +16,8 @@ class Model(ABC):
     """
     Abstract base class for recomendation models.
     """
+    
+    ERROR_MESSAGE = "Model not initialized or trained"
 
     def __init__(self, production=False, force_training=False):
         """
@@ -115,7 +117,7 @@ class Model(ABC):
         Train the model on the given data
         """
         if self.trainset is None:
-            raise RuntimeError("Model not initialized or trained")
+            raise RuntimeError(self.ERROR_MESSAGE)
         self.training_impl()
 
     def training_save(self):
@@ -124,7 +126,7 @@ class Model(ABC):
         and save the model to a file
         """
         if self.trainset is None:
-            raise RuntimeError("Model not initialized or trained")
+            raise RuntimeError(self.ERROR_MESSAGE)
         self.training()
         self.save()
 
