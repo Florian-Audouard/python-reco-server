@@ -6,6 +6,8 @@ import threading
 from tqdm import tqdm
 import logging
 import pycountry
+import re
+import csv
 
 URL_SEARCH = "https://api.themoviedb.org/3/search/movie"
 URL_MOVIE = "https://api.themoviedb.org/3/movie"
@@ -34,7 +36,6 @@ CREATED_PATH_JSON = os.path.join("data", FOLDER, CREATED_PATH_JSON)
 
 
 def my_request(url, params, timeout):
-
     while True:
         try:
             response = requests.get(url, params=params, timeout=timeout)
@@ -76,7 +77,7 @@ def empty_dict(movie_id, title, genres):
     res = dict()
     res["Title"] = title
     res["Released"] = "Unknown"
-    res["Runtime"] = "0 min"
+    res["Runtime"] = "0"
     res["Genre"] = genres
     res["Plot"] = "Unknown"
     res["Poster"] = "https://upload.wikimedia.org/wikipedia/en/6/60/No_Picture.jpg"
@@ -87,27 +88,41 @@ def empty_dict(movie_id, title, genres):
     return res
 
 
+def invalid_data(data):
+    return data is None or data == "N/A" or data == ""
+
+
 def check_dict(checking_dict: dict):
-    if checking_dict["Released"] is None or checking_dict["Released"] == "N/A":
+    if invalid_data(checking_dict.get("Released")):
         checking_dict["Released"] = "Unknown"
-    if checking_dict["Runtime"] is None or checking_dict["Runtime"] == "N/A":
+    if invalid_data(checking_dict.get("Runtime")):
         checking_dict["Runtime"] = "0"
-    if checking_dict["Genre"] is None or checking_dict["Genre"] == "N/A":
+    if invalid_data(checking_dict.get("Genre")):
         checking_dict["Genre"] = "Unknown"
-    if checking_dict["Plot"] is None or checking_dict["Plot"] == "N/A":
+    if invalid_data(checking_dict.get("Plot")):
         checking_dict["Plot"] = "Unknown"
-    if checking_dict["Poster"] is None or checking_dict["Poster"] == "N/A":
+    if invalid_data(checking_dict.get("Poster")):
         checking_dict["Poster"] = (
             "https://upload.wikimedia.org/wikipedia/en/6/60/No_Picture.jpg"
         )
-    if checking_dict["Country"] is None or checking_dict["Country"] == "N/A":
+    if invalid_data(checking_dict.get("Country")):
         checking_dict["Country"] = "Unknown"
-    if checking_dict["Director"] is None or checking_dict["Director"] == "N/A":
+    if invalid_data(checking_dict.get("Director")):
         checking_dict["Director"] = "Unknown"
-    if checking_dict["Writer"] is None or checking_dict["Writer"] == "N/A":
+    if invalid_data(checking_dict.get("Writer")):
         checking_dict["Writer"] = "Unknown"
-    if checking_dict["Actors"] is None or checking_dict["Actors"] == "N/A":
+    if invalid_data(checking_dict.get("Actors")):
         checking_dict["Actors"] = "Unknown"
+
+    if "Runtime" in checking_dict and "S" in checking_dict["Runtime"]:
+        checking_dict["Runtime"] = checking_dict["Runtime"].replace("S", "")
+
+    for key in checking_dict:
+        if isinstance(checking_dict[key], str):
+            checking_dict[key] = checking_dict[key].replace('"', "")
+            checking_dict[key] = checking_dict[key].replace("\n", "")
+            checking_dict[key] = checking_dict[key].replace("  ", " ")
+            checking_dict[key] = checking_dict[key].strip()
 
 
 def custom_themoviedb_search(movie_id, title, genres, api_key):
@@ -125,35 +140,41 @@ def custom_themoviedb_search(movie_id, title, genres, api_key):
     res_json = my_request(URL_MOVIE + f"/{id_movie}", params=params, timeout=10)
 
     res = dict()
-    res["Title"] = res_json["title"]
-    res["Released"] = res_json["release_date"]
-    res["Runtime"] = str(res_json["runtime"])
-    list_genre = [g["name"] for g in res_json["genres"]]
+    res["Title"] = res_json.get("title", "")
+    res["Released"] = res_json.get("release_date", "")
+    res["Runtime"] = str(res_json.get("runtime", "0"))
+    list_genre = [g["name"] for g in res_json.get("genres", [])]
     res["Genre"] = ",".join(list_genre)
-    res["Plot"] = res_json["overview"]
-    if res_json["poster_path"] is None:
+    res["Plot"] = res_json.get("overview", "")
+    if res_json.get("poster_path") is None:
         res["Poster"] = "https://upload.wikimedia.org/wikipedia/en/6/60/No_Picture.jpg"
     else:
         res["Poster"] = "https://image.tmdb.org/t/p/w500" + res_json["poster_path"]
-    code = res_json["origin_country"][0]
-    try:
-        res["Country"] = pycountry.countries.get(alpha_2=code).name
-    except Exception as e:
-        if code == "SU":
-            res["Country"] = "Soviet Union"
-        elif code == "YU":
-            res["Country"] = "Yugoslavia"
-        else:
-            log.error("Country not found for code %s: %s", code, str(e))
-            res["Country"] = "Unknown"
+    country = res_json["origin_country"]
+    if len(country) == 0:
+        res["Country"] = "Unknown"
+    else:
+        try:
+            code = country[0]
+            res["Country"] = pycountry.countries.get(alpha_2=code).name
+        except Exception as e:
+            if code == "SU":
+                res["Country"] = "Soviet Union"
+            elif code == "YU":
+                res["Country"] = "Yugoslavia"
+            else:
+                res["Country"] = "Unknown"
 
     res_json = my_request(URL_MOVIE + f"/{id_movie}/credits", params=params, timeout=10)
     res["Director"] = next(
-        (m["name"] for m in res_json["crew"] if m["job"] == "Director"), None
+        (m["name"] for m in res_json.get("crew", []) if m["job"] == "Director"),
+        "Unknown",
     )
-    list_writer = [m["name"] for m in res_json["crew"] if m["job"] == "Screenplay"]
+    list_writer = [
+        m["name"] for m in res_json.get("crew", []) if m["job"] == "Screenplay"
+    ]
     res["Writer"] = ",".join(list_writer)
-    list_actors = [m["name"] for m in res_json["cast"]]
+    list_actors = [m["name"] for m in res_json.get("cast", [])]
     res["Actors"] = ",".join(list_actors)
 
     return res
@@ -193,39 +214,56 @@ def create_json(data):
     return res
 
 
-# Lecture du fichier
-with open(FULL_PATH, "r", encoding="utf-8") as f:
-    lines = f.readlines()
+def extract_title_and_year(raw_title):
+    raw_title = raw_title.strip()
 
-header = (
-    "movieId,title,released,runtime,genre,director,writer,actors,plot,country,poster\n"
-)
-movie_lines = lines[1:]
+    # Extract year from the end
+    year_match = re.search(r"\((\d{4})\)\s*$", raw_title)
+    year = year_match.group(1) if year_match else None
 
-# Découpage en lots
-chunks = [[] for _ in range(num_api_keys)]
-for i, line in enumerate(movie_lines):
-    chunks[i % num_api_keys].append(line)  # +1 à cause de l'en-tête
+    # Remove the year from the end
+    if year:
+        raw_title = re.sub(r"\s*\(\d{4}\)\s*$", "", raw_title)
+
+    # Remove leading (number) like (500)
+    raw_title = re.sub(r"^\([^)]*\)\s*", "", raw_title)
+
+    # Remove all remaining parenthetical content
+    raw_title = re.sub(r"\([^)]*\)", "", raw_title)
+
+    # Final cleanup
+    clean_title = raw_title.strip().strip('"').strip()
+
+    return clean_title, year
+
 
 results_lock = threading.Lock()
 csv_results = []
 json_results = []
+
+# Read CSV with DictReader and chunk rows
+with open(FULL_PATH, "r", encoding="utf-8") as f:
+    reader = csv.DictReader(f)
+    rows = list(reader)
+
+chunks = [[] for _ in range(num_api_keys)]
+for i, row in enumerate(rows):
+    chunks[i % num_api_keys].append(row)
 
 
 def process_chunk(chunk, api_key):
     local_csv = []
     local_json = []
 
-    for line in tqdm(chunk, desc=f"Thread {api_key[:4]}..."):
-        line = line.rstrip()
-        if not line:
-            continue
-        title = line.split(",")[1].split("(")[0].strip()
-        years = line.split(",")[1].split("(")[-1].split(")")[0].strip()
+    for row in tqdm(chunk, desc=f"Thread {api_key[:4]}..."):
+        movie_id = row["movieId"]
+        raw_title = row["title"]
+        genres = row.get("genres", "")
+
+        title, years = extract_title_and_year(raw_title)
+
         movie_data = fetch_movie_data(title, years, api_key)
-        movie_id = line.split(",")[0]
         if movie_data.get("Response") == "False":
-            genres = line.split(",")[-1]
             movie_data = custom_themoviedb_search(
                 movie_id, title, genres, api_key_themoviedb
             )
@@ -240,7 +278,7 @@ def process_chunk(chunk, api_key):
         json_results.extend(local_json)
 
 
-# Lancement des threads
+# Start threads
 threads = []
 for i in range(num_api_keys):
     t = threading.Thread(target=process_chunk, args=(chunks[i], api_key_list[i]))
@@ -252,6 +290,10 @@ for t in threads:
 
 csv_results = sorted(csv_results, key=lambda x: int(x.split(",")[0]))
 json_results = sorted(json_results, key=lambda x: int(x["MovieId"]))
+
+header = (
+    "movieId,title,released,runtime,genre,director,writer,actors,plot,country,poster\n"
+)
 
 # Écriture des fichiers
 with open(CREATED_PATH_CSV, "w", encoding="utf-8") as f:
