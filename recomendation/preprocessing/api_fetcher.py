@@ -88,25 +88,25 @@ def empty_dict(movie_id, title, genres):
 
 
 def check_dict(checking_dict: dict):
-    if checking_dict["Released"] is None:
+    if checking_dict["Released"] is None or checking_dict["Released"] == "N/A":
         checking_dict["Released"] = "Unknown"
-    if checking_dict["Runtime"] is None:
+    if checking_dict["Runtime"] is None or checking_dict["Runtime"] == "N/A":
         checking_dict["Runtime"] = "0"
-    if checking_dict["Genre"] is None:
+    if checking_dict["Genre"] is None or checking_dict["Genre"] == "N/A":
         checking_dict["Genre"] = "Unknown"
-    if checking_dict["Plot"] is None:
+    if checking_dict["Plot"] is None or checking_dict["Plot"] == "N/A":
         checking_dict["Plot"] = "Unknown"
-    if checking_dict["Poster"] is None:
+    if checking_dict["Poster"] is None or checking_dict["Poster"] == "N/A":
         checking_dict["Poster"] = (
             "https://upload.wikimedia.org/wikipedia/en/6/60/No_Picture.jpg"
         )
-    if checking_dict["Country"] is None:
+    if checking_dict["Country"] is None or checking_dict["Country"] == "N/A":
         checking_dict["Country"] = "Unknown"
-    if checking_dict["Director"] is None:
+    if checking_dict["Director"] is None or checking_dict["Director"] == "N/A":
         checking_dict["Director"] = "Unknown"
-    if checking_dict["Writer"] is None:
+    if checking_dict["Writer"] is None or checking_dict["Writer"] == "N/A":
         checking_dict["Writer"] = "Unknown"
-    if checking_dict["Actors"] is None:
+    if checking_dict["Actors"] is None or checking_dict["Actors"] == "N/A":
         checking_dict["Actors"] = "Unknown"
 
 

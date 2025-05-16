@@ -19,6 +19,8 @@ class Model(ABC):
     
     ERROR_MESSAGE = "Model not initialized or trained"
 
+    ERROR_MESSAGE = "Model not initialized or trained"
+
     def __init__(self, production=False, force_training=False):
         """
         Initialize the model with default values.
@@ -184,7 +186,7 @@ class Model(ABC):
         recalls = dict()
 
         for uid, user_ratings in user_est_true.items():
-            user_est_true[uid] = sorted(user_ratings, key=lambda x: x[1], reverse=True)
+            user_ratings.sort(key=lambda x: x[0], reverse=True)
 
             top_k = user_ratings[:k]
 
