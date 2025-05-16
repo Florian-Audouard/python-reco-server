@@ -174,7 +174,7 @@ class Model(ABC):
         Returns:
             float: Accuracy score
         """
-        threshold = (self.max - self.min) / 2
+        threshold = (self.max + self.min) / 2
         predictions = self.get_prediction_set()
         user_est_true = defaultdict(list)
         for pred in predictions:

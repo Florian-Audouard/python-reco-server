@@ -1,53 +1,55 @@
-import pandas as pd
 import numpy as np
 from scipy.sparse import lil_matrix
 import itertools as it
 
-def markov_matrix(trainset):
+def build_movieid_mapping(ratings):
     """
-    Create a Markov matrix from the ratings data.
-
-    Args:
-        trainset: 
-            An object containing user ratings, with the following attributes:
-            - n_items (int): total number of movies.
-            - ur (dict): dictionary {user_id: [(movie_id, rating), ...]}.
-
-    Returns:
-        scipy.sparse.csr_matrix: 
-            Normalized Markov matrix (number of co-occurrences between each pair of movies, divided by the total).
-            The matrix is of size (number of movies, number of movies).
+    Retourne :
+      movie_id_to_idx: dict {movieId → idx 0..N-1}
+      idx_to_movie_id: dict inverse si besoin
     """
-    number_of_movies = trainset.n_items
-    markov_matrix = lil_matrix((number_of_movies, number_of_movies))
+    unique_ids = sorted(ratings["movieId"].unique())
+    movie_id_to_idx = {mid: i for i, mid in enumerate(unique_ids)}
+    idx_to_movie_id = {i: mid for i, mid in enumerate(unique_ids)}
+    return movie_id_to_idx, idx_to_movie_id
+
+def markov_matrix(trainset, movieid2idx):
+    """
+    Crée la matrice de transition Markov normalisée (CSR) de taille N×N
+    en utilisant movieid2idx pour indexer de façon compacte.
+    """
+    n = len(movieid2idx)
+    M = lil_matrix((n, n))
+    
     for _, u_ratings in trainset.ur.items():
-        movie_watch_by_user = set()
-        for movie_id, _ in u_ratings:
-            movie_watch_by_user.add(movie_id)
-        for i, j in it.combinations(movie_watch_by_user, 2):
-            markov_matrix[i, j] += 1
-            markov_matrix[j, i] += 1
-    markov_matrix = markov_matrix.tocsr()
-    row_weight = np.array(markov_matrix.sum(axis=1)).flatten()
+        # on récupère l'ensemble des indices internes vus par l'utilisateur
+        idxs = { movieid2idx[mid] 
+                 for (mid, _) in u_ratings 
+                 if mid in movieid2idx }
+        for i, j in it.combinations(idxs, 2):
+            M[i, j] += 1
+            M[j, i] += 1
 
-    row_index, _ = markov_matrix.nonzero()
-    markov_matrix.data /= row_weight[row_index]
-    return markov_matrix
+    M = M.tocsr()
+    row_sum = np.array(M.sum(axis=1)).flatten()
+    rows, _ = M.nonzero()
+    M.data /= row_sum[rows]
+    return M
 
-def get_user_vector(trainset, user_id):
+
+def get_user_vector(ratings, user_id, movieId_to_idx):
     """
-    Get the user vector for a given user.
-
-    Args:
-        trainset: The training set containing user ratings
-        user_id: The ID of the user
-
-    Returns:
-        list: User vector (binary vector of size n_items, where 1 means the user has seen the movie)
+    Retourne un vecteur binaire de longueur N=len(movieId_to_idx),
+    où vec[idx] = 1 si l'utilisateur a vu le film movieId (via movieId_to_idx).
     """
-    user_vector = [0] * trainset.n_items
-    list_movies_and_rating = trainset.ur[user_id]
-    for movie_id, _ in list_movies_and_rating:
-        user_vector[movie_id] = 1
+    n = len(movieId_to_idx)
+    vec = np.zeros(n, dtype=int)
 
-    return user_vector
+    # Pour chaque movieId que user_id a vu, si dans movieid2idx, on positionne 1
+    seen = ratings.loc[ratings["userId"] == user_id, "movieId"]
+    for mid in seen:
+        idx = movieId_to_idx.get(mid)
+        if idx is not None:
+            vec[idx] = 1
+
+    return vec
