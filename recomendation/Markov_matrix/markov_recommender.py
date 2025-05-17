@@ -20,6 +20,13 @@ class MarkovRecommender(Model):
     """
 
     def __init__(self, production=False, force_training=False):
+        """
+        Initializes the MarkovRecommender model.
+
+        Args:
+            production (bool): Production mode flag.
+            force_training (bool): If True, forces retraining of the model.
+        """
         super().__init__(production, force_training)
         self.model = None
         self.filename = "markov_model.npz"
@@ -28,7 +35,10 @@ class MarkovRecommender(Model):
 
     def init_data(self, ratings):
         """
-        Initialize data and build movie ID mappings.
+        Initializes data and builds movie ID mappings.
+
+        Args:
+            ratings (pd.DataFrame): DataFrame containing user ratings.
         """
         super().init_data(ratings)
         # build mapping after ratings is set
@@ -62,26 +72,42 @@ class MarkovRecommender(Model):
         os.makedirs(self.data_dir, exist_ok=True)
         self.model = scipy.sparse.load_npz(self.get_full_path())
 
-    def predict(self, user_id, list_movie_id):
+    def predict(self, user_vector, list_movie_id):
         """
         Predicts scores for a given user and a list of movies using the Markov model.
-        Returns a list of (movie_id, predicted_score) tuples.
+
+        Args:
+            user_vector (np.ndarray): Binary vector indicating movies seen by the user.
+            list_movie_id (list): List of movieIds to exclude (already seen).
+
+        Returns:
+            list: List of (movieId, predicted_score) tuples, sorted by score descending.
         """
         if self.model is None:
             raise RuntimeError(self.ERROR_MESSAGE)
 
-        user_vector = get_user_vector(self.ratings, user_id, self.movieId_to_idx)
-        scores = self.model.dot(user_vector)/user_vector.sum()  
+        scores = self.model.dot(user_vector)
 
-        # sort and select top candidates
+        # Convert movieIds to internal indices
+        excluded_idxs = {self.movieId_to_idx[mid] for mid in list_movie_id if mid in self.movieId_to_idx}
+
+        # Sort and filter out seen movies
         sorted_idxs = np.argsort(scores)[::-1]
-        recommended_idxs = [index for index in sorted_idxs if index not in list_movie_id]
-        # map internal indices back to movie IDs
+        recommended_idxs = [index for index in sorted_idxs if index not in excluded_idxs]
+
+        # Map internal indices back to movie IDs
         return [(self.idx_to_movieId[idx], scores[idx]) for idx in recommended_idxs]
 
     def get_recommendations(self, user_id, top_n):
         """
         Generates the top-N recommendations for a given user.
+
+        Args:
+            user_id (int): The user ID.
+            top_n (int): Number of recommendations to return.
+
+        Returns:
+            list: List of (movieId, score) tuples, sorted by score descending.
         """
         if self.model is None:
             raise RuntimeError(self.ERROR_MESSAGE)
@@ -89,8 +115,11 @@ class MarkovRecommender(Model):
 
     def get_prediction_set(self):
         """
-        Generates a prediction set for validation.
-        Returns dict: user_id -> (predictions, masked_index)
+        Generates a prediction set for validation (leave-one-out).
+        For each user, hides one seen movie and predicts on the others.
+
+        Returns:
+            dict: user_id -> (list of predictions, masked index)
         """
         real_and_prediction_data_for_user = {}
         for (user_id, _, _) in self.validation_set:
@@ -98,27 +127,59 @@ class MarkovRecommender(Model):
                 continue
             user_vector = get_user_vector(self.ratings, user_id, self.movieId_to_idx)
             seen_idxs = np.nonzero(user_vector)[0]
-            if seen_idxs.size == 0:
-                continue
             hide = np.random.choice(seen_idxs)
             user_vector[hide] = 0
-            preds = self.predict(user_id, list(seen_idxs[seen_idxs != hide]))
+
+            seen_movie_ids = [self.idx_to_movieId[idx] for idx in seen_idxs if idx != hide]
+            preds = self.predict(user_vector, seen_movie_ids)
+
             real_and_prediction_data_for_user[user_id] = (preds, hide)
         return real_and_prediction_data_for_user
-
-    def accuracy(self, k=100):
+    
+    def extract_top_k(self, sorted_prediction, k):
         """
-        Computes precision, recall, and F1-score for the model.
-        Uses leave-one-out: checks if hidden movie is in top-k.
+        Returns the top-k items, including all ties with the k-th score.
+
+        Args:
+            sorted_prediction (list): List of (movieId, score) tuples, sorted by score descending.
+            k (int): Minimum number of items to return.
+
+        Returns:
+            list: List of (movieId, score) with length >= k (if ties).
+        """
+        if not sorted_prediction:
+            return []
+        top_k = sorted_prediction[:k]
+        if len(sorted_prediction) <= k:
+            return top_k
+
+        kth_score = sorted_prediction[k-1][1]
+        for item in sorted_prediction[k:]:
+            if item[1] == kth_score:
+                top_k.append(item)
+            else:
+                break
+        return top_k
+
+    def accuracy(self, k=10):
+        """
+        Computes precision for the model using leave-one-out:
+        checks if the hidden movie is in the top-k recommendations.
+
+        Args:
+            k (int): Number of recommendations to consider.
+
+        Returns:
+            dict: {"precision": value}
         """
         data = self.get_prediction_set()
         relevant_count = 0
         for user_id,(preds, hide) in data.items():
-            top_k = sorted(preds, key=lambda x: x[1], reverse=True)[:k]
-            recommended_ids = {movie_id for (movie_id, _) in top_k}
-            if hide in recommended_ids:
+            sorted_prediction = sorted(preds, key=lambda x: x[1], reverse=True)
+            top_k = self.extract_top_k(sorted_prediction, k)
+            recommended_ids = {ids for (ids, _) in top_k}
+            if self.idx_to_movieId[hide] in recommended_ids:
                 relevant_count += 1
-
         total = len(data)
         precision = relevant_count / total if total else 0
         return {"precision": precision}
@@ -127,3 +188,4 @@ if __name__ == "__main__":
     recommender = MarkovRecommender(False, True)
     data = load_data(f"ml-{FOLDER_SET}m")
     recommender.testing_main(data)
+
