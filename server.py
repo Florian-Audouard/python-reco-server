@@ -5,12 +5,13 @@ from recomendation.svd.svd_recommender import SVDRecommender
 from recomendation.preprocessing.movie_manipulation import load_data_from_url
 
 app = FastAPI()
+URL_RATING = "http://localhost:8080/rating/file"
 
 
 FORCE_TRAINING = False
 PRODUCTION = True
 
-data = load_data_from_url()
+data = load_data_from_url(URL_RATING)
 
 algo = SVDRecommender(PRODUCTION, FORCE_TRAINING)
 algo.init_data(data)

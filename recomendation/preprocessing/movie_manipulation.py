@@ -33,14 +33,11 @@ def load_data(folder):
     return ratings
 
 
-def load_data_from_url():
+def load_data_from_url(url):
     """
-    Load movies, ratings, and tags data from a URL.
+    Load data from a URL.
 
-    Returns:
-        tuple: Tuple containing three DataFrames (movies, ratings, tags).
     """
-    url = "http://localhost:8080/rating/file"
     response = requests.get(url, timeout=20)
     data = pd.read_csv(StringIO(response.text))
     return data
