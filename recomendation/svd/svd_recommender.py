@@ -83,7 +83,7 @@ class SVDRecommender(Model):
         """
         if self.model is None:
             raise RuntimeError("Model not initialized or trained")
-
+        user_id = str(user_id)
         return super().get_recommendations(user_id, top_n)
 
     def get_prediction_set(self):
