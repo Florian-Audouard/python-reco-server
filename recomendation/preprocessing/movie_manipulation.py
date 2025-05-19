@@ -3,6 +3,7 @@ import os
 import pandas as pd
 import requests
 from io import StringIO
+from sklearn.model_selection import train_test_split
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
@@ -49,6 +50,37 @@ def _testing_main():
     """
     ratings = load_data("ml-0.1m")
     print(ratings.head())
+
+
+# Group by user to avoid cold-start users in val set
+def __user_based_split(group, test_size):
+    if len(group) < 5:
+        return group, pd.DataFrame()  # skip splitting small groups
+    return train_test_split(group, test_size=test_size, shuffle=False)
+
+
+def smart_split(df, test_size=0.2):
+    """
+    Split a DataFrame into two parts based on a given ratio.
+
+    Args:
+        df (pd.DataFrame): DataFrame to split.
+        ratio (float): Ratio for splitting the DataFrame.
+
+    Returns:
+        tuple: Tuple containing two DataFrames (train_df, test_df).
+    """
+    train_list = []
+    val_list = []
+
+    for _, user_group in df.groupby("userId"):
+        train, val = __user_based_split(user_group, test_size=test_size)
+        train_list.append(train)
+        val_list.append(val)
+
+    train_df = pd.concat(train_list)
+    val_df = pd.concat(val_list)
+    return train_df, val_df
 
 
 if __name__ == "__main__":

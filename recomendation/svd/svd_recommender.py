@@ -4,7 +4,7 @@ Module de recommandation de films basé sur une approche hybride (filtrage colla
 
 import os
 import sys
-from surprise import SVD
+from surprise import SVD, Dataset, Reader
 import joblib
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -26,13 +26,27 @@ class SVDRecommender(Model):
         super().__init__(production, force_training)
         self.model = None
         self.filename = "svd_model.joblib"
+        self.surprise_trainset = None
+        self.surprise_validation_set = None
+
+    def init_data_impl(self):
+        reader = Reader(rating_scale=(self.min, self.max))
+        self.surprise_trainset = Dataset.load_from_df(
+            self.trainset[["userId", "movieId", "rating"]], reader
+        ).build_full_trainset()
+        if self.validation_set is not None:
+            self.surprise_validation_set = list(
+                self.validation_set[["userId", "movieId", "rating"]].itertuples(
+                    index=False, name=None
+                )
+            )
 
     def training_impl(self):
         """
         Train the SVD model using the initialized data
         """
         self.model = SVD()
-        self.model.fit(self.trainset)
+        self.model.fit(self.surprise_trainset)
 
     def save(self):
         """
@@ -66,9 +80,9 @@ class SVDRecommender(Model):
         """
         results = []
         for movie_id in candidates:
-            pred_rating = self.model.predict(user_id, movie_id).est
+            pred_rating = self.model.predict(user_id, movie_id)
 
-            results.append((int(movie_id), float(pred_rating)))
+            results.append((int(movie_id), float(pred_rating.est)))
 
         return results
 
@@ -92,7 +106,7 @@ class SVDRecommender(Model):
         Returns:
             list: List of (user_id, movie_id, actual_rating) tuples
         """
-        return self.model.test(self.validation_set)
+        return self.model.test(self.surprise_validation_set)
 
 
 if __name__ == "__main__":

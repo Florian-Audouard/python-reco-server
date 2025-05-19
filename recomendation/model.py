@@ -1,22 +1,20 @@
 import os
 import sys
 from abc import ABC, abstractmethod
-from surprise import Dataset, Reader
-from surprise.model_selection import train_test_split
-from surprise.accuracy import rmse, mae
 from collections import defaultdict
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from utils.time_util import get_time_func
 from utils.logger import log
+from preprocessing.movie_manipulation import smart_split
 
 
 class Model(ABC):
     """
     Abstract base class for recomendation models.
     """
-    
+
     ERROR_MESSAGE = "Model not initialized or trained"
 
     ERROR_MESSAGE = "Model not initialized or trained"
@@ -35,28 +33,6 @@ class Model(ABC):
         self.max = None
         self.force_training = force_training
         self.production = production
-
-    @get_time_func
-    def init_data(self, ratings):
-        """
-        Initialize the model with data
-        Args:
-            data (tuple): Tuple containing (movies, ratings, tags) DataFrames
-        """
-        self.ratings = ratings
-        # Convert ratings DataFrame to Surprise dataset
-        self.min = self.ratings["rating"].min()
-        self.max = self.ratings["rating"].max()
-        reader = Reader(rating_scale=(self.min, self.max))
-        data = Dataset.load_from_df(
-            self.ratings[["userId", "movieId", "rating"]], reader
-        )
-
-        # Split the data into trainset and validation set
-        if self.production:
-            self.trainset = data.build_full_trainset()
-            return
-        self.trainset, self.validation_set = train_test_split(data, test_size=0.2)
 
     def get_full_path(self):
         if self.filename is None:
@@ -92,6 +68,33 @@ class Model(ABC):
         Returns:
             Predicted rating for each movie
         """
+
+    @abstractmethod
+    def init_data_impl(self):
+        """
+        Initialize the model with data
+        Args:
+            data (tuple): Tuple containing (movies, ratings, tags) DataFrames
+        """
+
+    @get_time_func
+    def init_data(self, ratings):
+        """
+        Initialize the model with data
+        Args:
+            data (tuple): Tuple containing (movies, ratings, tags) DataFrames
+        """
+        self.ratings = ratings
+        # Convert ratings DataFrame to Surprise dataset
+        self.min = self.ratings["rating"].min()
+        self.max = self.ratings["rating"].max()
+
+        # Split the data into trainset and validation set
+        if self.production:
+            self.trainset = ratings
+            return
+        self.trainset, self.validation_set = smart_split(ratings, test_size=0.2)
+        self.init_data_impl()
 
     @get_time_func
     def load(self):
@@ -208,8 +211,6 @@ class Model(ABC):
         f1 = 2 * (avg_precision * avg_recall) / (avg_precision + avg_recall)
 
         return {
-            "rmse": rmse(predictions, verbose=False),
-            "mae": mae(predictions, verbose=False),
             "precision": avg_precision,
             "recall": avg_recall,
             "F1": f1,
