@@ -1,6 +1,8 @@
 import sys
 import os
 import pandas as pd
+import requests
+from io import StringIO
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
@@ -29,6 +31,19 @@ def load_data(folder):
     ratings = pd.read_csv(os.path.join(full_path, "ratings.csv"))
 
     return ratings
+
+
+def load_data_from_url():
+    """
+    Load movies, ratings, and tags data from a URL.
+
+    Returns:
+        tuple: Tuple containing three DataFrames (movies, ratings, tags).
+    """
+    url = "http://localhost:8080/rating/file"
+    response = requests.get(url, timeout=20)
+    data = pd.read_csv(StringIO(response.text))
+    return data
 
 
 def _testing_main():

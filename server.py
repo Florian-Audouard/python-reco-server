@@ -2,15 +2,15 @@ from fastapi import FastAPI, Query, File, UploadFile
 
 
 from recomendation.svd.svd_recommender import SVDRecommender
-from recomendation.preprocessing.movie_manipulation import load_data
+from recomendation.preprocessing.movie_manipulation import load_data_from_url
 
 app = FastAPI()
 
-folder = "0.1"
+
 FORCE_TRAINING = False
 PRODUCTION = True
 
-data = load_data(f"ml-{folder}m")
+data = load_data_from_url()
 
 algo = SVDRecommender(PRODUCTION, FORCE_TRAINING)
 algo.init_data(data)
