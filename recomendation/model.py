@@ -17,13 +17,12 @@ class Model(ABC):
 
     ERROR_MESSAGE = "Model not initialized or trained"
 
-    ERROR_MESSAGE = "Model not initialized or trained"
-
     def __init__(self, production=False, force_training=False):
         """
         Initialize the model with default values.
         """
         self.ratings = None
+        self.movies = None
         self.trainset = None
         self.validation_set = None
         self.script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -78,13 +77,14 @@ class Model(ABC):
         """
 
     @get_time_func
-    def init_data(self, ratings):
+    def init_data(self, ratings, movies):
         """
         Initialize the model with data
         Args:
             data (tuple): Tuple containing (movies, ratings, tags) DataFrames
         """
         self.ratings = ratings
+        self.movies = movies
         # Convert ratings DataFrame to Surprise dataset
         self.min = self.ratings["rating"].min()
         self.max = self.ratings["rating"].max()
@@ -163,9 +163,9 @@ class Model(ABC):
             The prediction set
         """
 
-    def testing_main(self, data):
+    def testing_main(self, ratings, movies):
         # Exemple d'utilisation
-        self.init_data(data)
+        self.init_data(ratings, movies)
         self.load()
         self.get_recommendations(user_id=2, top_n=5)
         accuracy = self.accuracy()

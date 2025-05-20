@@ -4,16 +4,20 @@ import pandas as pd
 import requests
 from io import StringIO
 from sklearn.model_selection import train_test_split
+from concurrent.futures import ThreadPoolExecutor
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 from utils.time_util import get_time_func
 
+URL_RATING = "http://localhost:8080/rating/file"
+URL_MOVIE = "http://localhost:8080/movie/file"
+
 
 FOLDER = "data"
 
 
-def load_data(folder):
+def load_data_from_file(folder):
     """
     Load movies, ratings, and tags data from CSV files.
 
@@ -30,26 +34,40 @@ def load_data(folder):
 
     full_path = os.path.join(data_dir, folder)
     ratings = pd.read_csv(os.path.join(full_path, "ratings.csv"))
+    movies = pd.read_csv(os.path.join(full_path, "movies.csv"))
 
-    return ratings
+    return ratings, movies
 
 
-def load_data_from_url(url):
-    """
-    Load data from a URL.
-
-    """
+def fetch_csv_from_url(url):
     response = requests.get(url, timeout=20)
-    data = pd.read_csv(StringIO(response.text))
-    return data
+    return pd.read_csv(StringIO(response.text))
+
+
+def load_data_from_url():
+    """
+    Load data from URLs in parallel threads.
+    """
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        future_ratings = executor.submit(fetch_csv_from_url, URL_RATING)
+        future_movies = executor.submit(fetch_csv_from_url, URL_MOVIE)
+
+        ratings = future_ratings.result()
+        movies = future_movies.result()
+
+    return ratings, movies
 
 
 def _testing_main():
     """
     Fonction de test pour le module de manipulation de films.
     """
-    ratings = load_data("ml-0.1m")
+    ratings, movies = load_data_from_url()
     print(ratings.head())
+    print(movies.head())
+    ratings, movies = load_data_from_file("ml-0.1m")
+    print(ratings.head())
+    print(movies.head())
 
 
 # Group by user to avoid cold-start users in val set

@@ -5,16 +5,15 @@ from recomendation.svd.svd_recommender import SVDRecommender
 from recomendation.preprocessing.movie_manipulation import load_data_from_url
 
 app = FastAPI()
-URL_RATING = "http://localhost:8080/rating/file"
 
 
 FORCE_TRAINING = False
 PRODUCTION = True
 
-data = load_data_from_url(URL_RATING)
+ratings, movies = load_data_from_url()
 
 algo = SVDRecommender(PRODUCTION, FORCE_TRAINING)
-algo.init_data(data)
+algo.init_data(ratings, movies)
 algo.load()
 
 
@@ -35,10 +34,3 @@ def get_recommendations(user_id: int, top_n: int = Query(..., gt=0)):
     """
     print(f"Getting recommendations for user {user_id} with top_n={top_n}")
     return algo.get_recommendations(user_id=user_id, top_n=top_n)
-
-
-@app.post("/upload/")
-async def upload_file(file: UploadFile = File(...)):
-    # Read the file contents (optional)
-    contents = await file.read()
-    print(f"File contents: {contents[:100]}...")

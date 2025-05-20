@@ -1,7 +1,7 @@
 import pandas as pd
 
 from recomendation.svd.svd_recommender import SVDRecommender
-from recomendation.preprocessing.movie_manipulation import load_data
+from recomendation.preprocessing.movie_manipulation import load_data_from_file
 from io import StringIO
 import requests
 from utils.logger import log
@@ -28,7 +28,7 @@ def init_algo_from_file():
     Initialize the algorithm from a file
     """
     log.info("Loading data from file\n")
-    data = load_data(f"ml-{folder}m")
+    data = load_data_from_file(f"ml-{folder}m")
     return init_algo(data)
 
 
