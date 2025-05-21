@@ -45,7 +45,7 @@ class DBSCANRecommender(Model):
         index_to_remove = None
 
         if selected_list[0][1] > 2.5 and selected_list[-1][2] == 0 :
-            if rd.random() < 0.6:
+            if rd.random() < 0.8:
                 selected_movie = selected_list[0]
                 index_to_remove = 0
             else:
