@@ -1,7 +1,7 @@
 import os
 import sys
 from abc import ABC, abstractmethod
-from collections import defaultdict
+import pandas as pd
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -32,6 +32,7 @@ class Model(ABC):
         self.max = None
         self.force_training = force_training
         self.production = production
+        self.threshold = None
 
     def get_full_path(self):
         if self.filename is None:
@@ -76,6 +77,17 @@ class Model(ABC):
             data (tuple): Tuple containing (movies, ratings, tags) DataFrames
         """
 
+    def get_recommendations_impl(self, user_id, top_n):
+        """
+        Get recommendations for a given user
+        Args:
+            user_id: User ID
+            top_n: Number of recommendations to return
+        Returns:
+            Recommendations for the user
+        """
+        pass
+
     @get_time_func
     def init_data(self, ratings, movies):
         """
@@ -85,6 +97,10 @@ class Model(ABC):
         """
         self.ratings = ratings
         self.movies = movies
+        self.movies["released"] = pd.to_datetime(self.movies["released"])
+        self.movies["year"] = self.movies["released"].dt.year
+        self.movies["month"] = self.movies["released"].dt.month
+        self.movies["day"] = self.movies["released"].dt.day
         # Convert ratings DataFrame to Surprise dataset
         self.min = self.ratings["rating"].min()
         self.max = self.ratings["rating"].max()
@@ -145,73 +161,65 @@ class Model(ABC):
         Returns:
             Predictions made by the model
         """
+        self.get_recommendations_impl(user_id, top_n)
         if self.trainset is None:
             raise RuntimeError("Data not initialized")
 
         candidates = self.ratings[self.ratings["userId"] != user_id]["movieId"].unique()
 
         results = self.predict(user_id, candidates)
-
-        results.sort(key=lambda x: x[1], reverse=True)
+        if top_n == -1:
+            return results
         return results[:top_n]
-
-    @abstractmethod
-    def get_prediction_set(self):
-        """
-        Get the prediction set
-        Returns:
-            The prediction set
-        """
 
     def testing_main(self, ratings, movies):
         # Exemple d'utilisation
         self.init_data(ratings, movies)
         self.load()
-        self.get_recommendations(user_id=2, top_n=5)
+        reco = self.get_recommendations(user_id=2, top_n=10)
+        log.info("Recommendations for user 2: %s", reco)
         accuracy = self.accuracy()
         for key, value in accuracy.items():
             log.info("%s: %s", key, value)
 
-    def accuracy(self, k=10):
-        """
-        Calculate the accuracy of the model's predictions
-
-        Returns:
-            float: Accuracy score
-        """
-        threshold = (self.max + self.min) / 2
-        predictions = self.get_prediction_set()
-        user_est_true = defaultdict(list)
-        for pred in predictions:
-            user_est_true[pred.uid].append((pred.iid, pred.est, pred.r_ui))
-
-        precisions = dict()
-        recalls = dict()
-
-        for uid, user_ratings in user_est_true.items():
-            user_ratings.sort(key=lambda x: x[0], reverse=True)
-
-            top_k = user_ratings[:k]
-
-            relevant = sum((true_r >= threshold) for (_, _, true_r) in user_ratings)
-            recommended = sum((est >= threshold) for (_, est, _) in top_k)
-            relevant_and_recommended = sum(
-                ((true_r >= threshold) and (est >= threshold))
-                for (_, est, true_r) in top_k
+    @get_time_func
+    def accuracy(self, top_n=10, note=3.5):
+        if self.validation_set is None:
+            raise RuntimeError("Validation set not initialized")
+        if self.threshold is not None:
+            self.threshold = note
+        precisions = []
+        recalls = []
+        for user in self.validation_set["userId"].unique():
+            relevant_items = set(
+                self.validation_set[
+                    (self.validation_set["userId"] == user)
+                    & (self.validation_set["rating"] >= note)
+                ]["movieId"].unique()
             )
+            candidates = self.validation_set[self.validation_set["userId"] == user][
+                "movieId"
+            ].unique()
 
-            precisions[uid] = (
-                relevant_and_recommended / recommended if recommended else 0
-            )
-            recalls[uid] = relevant_and_recommended / relevant if relevant else 0
+            recommendations = set(self.predict(user, candidates)[:top_n])
+            hits = recommendations.intersection(relevant_items)
 
-        # Moyennes sur tous les utilisateurs
-        avg_precision = sum(precisions.values()) / len(precisions)
-        avg_recall = sum(recalls.values()) / len(recalls)
-        f1 = 2 * (avg_precision * avg_recall) / (avg_precision + avg_recall)
+            precision = len(hits) / len(recommendations) if recommendations else 0
+            recall = len(hits) / len(relevant_items) if relevant_items else 0
+
+            precisions.append(precision)
+            recalls.append(recall)
+
+        # Moyenne des métriques
+        avg_precision = sum(precisions) / len(precisions) if precisions else 0
+        avg_recall = sum(recalls) / len(recalls) if recalls else 0
 
         return {
             "precision": avg_precision,
             "recall": avg_recall,
-            "F1": f1,
+            "f1_score": (
+                (2 * avg_precision * avg_recall / (avg_precision + avg_recall))
+                if avg_precision + avg_recall > 0
+                else 0
+            ),
         }
