@@ -6,6 +6,7 @@ import os
 import sys
 from surprise import SVD, Dataset, Reader
 import joblib
+from collections import defaultdict
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -28,6 +29,7 @@ class SVDRecommender(Model):
         self.filename = "svd_model.joblib"
         self.surprise_trainset = None
         self.surprise_validation_set = None
+        self.threshold = 3.0
 
     def init_data_impl(self):
         reader = Reader(rating_scale=(self.min, self.max))
@@ -79,14 +81,17 @@ class SVDRecommender(Model):
             float: Predicted rating
         """
         results = []
+        user_id = str(user_id)
+
         for movie_id in candidates:
             pred_rating = self.model.predict(user_id, movie_id)
-
             results.append((int(movie_id), float(pred_rating.est)))
-
+        results = list(filter(lambda x: x[1] > self.threshold, results))
+        results.sort(key=lambda x: x[1], reverse=True)
+        results = [x[0] for x in results]
         return results
 
-    def get_recommendations(self, user_id, top_n):
+    def get_recommendations_impl(self, user_id, top_n):
         """
         Generate hybrid recommendations for a given user
         Args:
@@ -97,16 +102,6 @@ class SVDRecommender(Model):
         """
         if self.model is None:
             raise RuntimeError("Model not initialized or trained")
-        user_id = str(user_id)
-        return super().get_recommendations(user_id, top_n)
-
-    def get_prediction_set(self):
-        """
-        Generate a set of predictions for the validation set
-        Returns:
-            list: List of (user_id, movie_id, actual_rating) tuples
-        """
-        return self.model.test(self.surprise_validation_set)
 
 
 if __name__ == "__main__":

@@ -1,1 +1,3 @@
-torch
+tensorflow
+tensorflow-recommenders
+install tf_keras
