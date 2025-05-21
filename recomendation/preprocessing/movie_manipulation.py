@@ -62,12 +62,13 @@ def _testing_main():
     """
     Fonction de test pour le module de manipulation de films.
     """
-    ratings, movies = load_data_from_url()
-    print(ratings.head())
-    print(movies.head())
     ratings, movies = load_data_from_file("ml-0.1m")
     print(ratings.head())
     print(movies.head())
+    ratings, movies = load_data_from_url()
+    print(ratings.head())
+    print(movies.head())
+
 
 
 # Group by user to avoid cold-start users in val set
