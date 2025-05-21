@@ -9,12 +9,5 @@ numpy<2
 scikit-surprise
 pandas
 scikit-learn
-random
-copy
-pickle
 umap
 sentence_transformers
-sklearn.preprocessing
-sklearn.preprocessing
-sklearn.cluster
-concurrent.futures 

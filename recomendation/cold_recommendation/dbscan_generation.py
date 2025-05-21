@@ -88,7 +88,7 @@ def extract_data_and_movies_id(ratings, movies):
     extract_data = []
     movie_ids = []
     movies_and_binary_vector = get_movie_and_binary_vector(movies)
-    descriptions = model.encode(movies['plot'].tolist(), batch_size=64, convert_to_numpy=True, show_progress_bar=False)
+    descriptions = model.encode(movies['plot'].tolist(), batch_size=64, convert_to_numpy=True)
 
     def extract_data_from_row(index_row):
         index, row = index_row
