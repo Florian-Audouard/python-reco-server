@@ -39,12 +39,26 @@ class DBSCANRecommender(Model):
             self.model = pickle.load(f)
 
     def get_select_random_movie(self, model_memory):
+        """
+        Selects a random movie from a random cluster in the model memory, 
+        with logic based on the mean rating and number of watches.
+
+        Args:
+            model_memory (dict): {label: list of (movieId, mean, number_of_watch)}
+
+        Returns:
+            tuple: (label, selected_list, selected_movie, index_to_remove)
+                - label: the chosen cluster label
+                - selected_list: the list of movies in the chosen cluster
+                - selected_movie: the selected (movieId, mean, number_of_watch) tuple or None
+                - index_to_remove: index of the selected movie in selected_list or None
+        """
         label = rd.choice(list(model_memory.keys()))
         selected_list = model_memory[label]
 
         index_to_remove = None
 
-        if selected_list[0][1] > 2.5 and selected_list[-1][2] == 0 :
+        if selected_list[0][1] > 2.5 and selected_list[-1][2] == 0:
             if rd.random() < 0.8:
                 selected_movie = selected_list[0]
                 index_to_remove = 0
@@ -54,7 +68,7 @@ class DBSCANRecommender(Model):
         elif selected_list[0][1] > 2.5:
             selected_movie = selected_list[0]
             index_to_remove = 0
-        elif selected_list[-1][2] == 0 :
+        elif selected_list[-1][2] == 0:
             selected_movie = selected_list[-1]
             index_to_remove = -1
         else:
