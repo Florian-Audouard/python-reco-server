@@ -161,16 +161,12 @@ class Model(ABC):
         Returns:
             Predictions made by the model
         """
-        self.get_recommendations_impl(user_id, top_n)
-        if self.trainset is None:
-            raise RuntimeError("Data not initialized")
 
         candidates = self.ratings[self.ratings["userId"] != user_id]["movieId"].unique()
 
-        results = self.predict(user_id, candidates)
-        if top_n == -1:
-            return results
-        return results[:top_n]
+        return self.get_recommendations_with_candidates(
+            user_id=user_id, candidates=candidates, top_n=top_n
+        )
 
     def testing_main(self, ratings, movies):
         # Exemple d'utilisation
@@ -182,8 +178,40 @@ class Model(ABC):
         for key, value in accuracy.items():
             log.info("%s: %s", key, value)
 
+    def get_recommendations_with_candidates(self, user_id, candidates, top_n):
+        """
+        Make predictions using the trained model
+        Args:
+            user_id: Input features to make predictions on
+            top_n: Number of recommendations to return
+        Returns:
+            Predictions made by the model
+        """
+        self.get_recommendations_impl(user_id, top_n)
+        if self.trainset is None:
+            raise RuntimeError("Data not initialized")
+
+        results = self.predict(user_id, candidates)
+        if top_n == -1:
+            return results
+        return results[:top_n]
+
+    def get_pres_recall(self, user, note, top_n):
+        candidates = self.validation_set[self.validation_set["userId"] == user]
+        relevant_items = set(
+            candidates[candidates["rating"] >= note]["movieId"].unique()
+        )
+        candidates = candidates["movieId"].unique()
+        recommendations = set(
+            self.get_recommendations_with_candidates(user, candidates, -1)
+        )
+        hits = recommendations.intersection(relevant_items)
+        precision = len(hits) / len(recommendations) if recommendations else 0
+        recall = len(hits) / len(relevant_items) if relevant_items else 0
+        return precision, recall
+
     @get_time_func
-    def accuracy(self, top_n=10, note=3.5):
+    def accuracy(self, top_n=5, note=3.5):
         if self.validation_set is None:
             raise RuntimeError("Validation set not initialized")
         if self.threshold is not None:
@@ -191,22 +219,7 @@ class Model(ABC):
         precisions = []
         recalls = []
         for user in self.validation_set["userId"].unique():
-            relevant_items = set(
-                self.validation_set[
-                    (self.validation_set["userId"] == user)
-                    & (self.validation_set["rating"] >= note)
-                ]["movieId"].unique()
-            )
-            candidates = self.validation_set[self.validation_set["userId"] == user][
-                "movieId"
-            ].unique()
-
-            recommendations = set(self.predict(user, candidates)[:top_n])
-            hits = recommendations.intersection(relevant_items)
-
-            precision = len(hits) / len(recommendations) if recommendations else 0
-            recall = len(hits) / len(relevant_items) if relevant_items else 0
-
+            precision, recall = self.get_pres_recall(user, note, top_n)
             precisions.append(precision)
             recalls.append(recall)
 

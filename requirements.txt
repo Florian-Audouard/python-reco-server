@@ -10,4 +10,4 @@ scikit-surprise
 pandas
 scikit-learn
 umap
-sentence_transformers
+sentence-transformers
