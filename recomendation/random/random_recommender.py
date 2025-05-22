@@ -37,16 +37,18 @@ class RandomRecommender(Model):
         # Pas de traitement spécial
         pass
 
-    def predict(self, user_id, list_movie_id):
+    def predict(self, user_id, candidates):
         """
         Predict ratings for the given user and list of movie IDs by returning random movie IDs.
 
         Returns:
             list: List of movie IDs in random order
         """
-        movie_ids = list(list_movie_id)
+        movie_ids = list(candidates)
         random.shuffle(movie_ids)
-        return movie_ids
+        size = len(candidates)
+        size = random.randint(1, size) if size > 0 else 0
+        return movie_ids[:size]
 
     def get_recommendations_impl(self, user_id, top_n):
         # Rien à faire ici car la logique est dans predict
