@@ -198,6 +198,8 @@ class Model(ABC):
 
     def get_pres_recall(self, user, note, top_n):
         candidates = self.validation_set[self.validation_set["userId"] == user]
+        if user == "3" or user == 3:
+            print(candidates)
         relevant_items = set(
             candidates[candidates["rating"] >= note]["movieId"].unique()
         )
@@ -219,6 +221,7 @@ class Model(ABC):
         precisions = []
         recalls = []
         for user in self.validation_set["userId"].unique():
+
             precision, recall = self.get_pres_recall(user, note, top_n)
             precisions.append(precision)
             recalls.append(recall)

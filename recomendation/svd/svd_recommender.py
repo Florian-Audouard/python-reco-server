@@ -29,7 +29,7 @@ class SVDRecommender(Model):
         self.filename = "svd_model.joblib"
         self.surprise_trainset = None
         self.surprise_validation_set = None
-        self.threshold = 3.0
+        self.threshold = 3.5
 
     def init_data_impl(self):
         reader = Reader(rating_scale=(self.min, self.max))

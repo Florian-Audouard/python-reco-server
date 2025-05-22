@@ -33,7 +33,13 @@ def load_data_from_file(folder):
     os.makedirs(data_dir, exist_ok=True)
 
     full_path = os.path.join(data_dir, folder)
-    ratings = pd.read_csv(os.path.join(full_path, "ratings.csv"))
+    ratings = pd.read_csv(
+        os.path.join(full_path, "ratings.csv"),
+        dtype={"rating": "float32"},
+        names=["userId", "movieId", "rating", "timestamp"],
+        index_col=None,
+        header=0,
+    )
     movies = pd.read_csv(os.path.join(full_path, "movies.csv"))
 
     return ratings, movies
@@ -68,7 +74,6 @@ def _testing_main():
     ratings, movies = load_data_from_url()
     print(ratings.head())
     print(movies.head())
-
 
 
 # Group by user to avoid cold-start users in val set

@@ -3,7 +3,7 @@ from fastapi import FastAPI, Query, File, UploadFile
 
 from recomendation.cold_recommendation.dbscan_recommender import DBSCANRecommender
 from recomendation.svd.svd_recommender import SVDRecommender
-from recomendation.preprocessing.movie_manipulation import load_data_from_url
+from recomendation.preprocessing.movie_manipulation import load_data_from_file
 
 app = FastAPI()
 
@@ -11,7 +11,7 @@ app = FastAPI()
 FORCE_TRAINING = False
 PRODUCTION = True
 
-ratings, movies = load_data_from_url()
+ratings, movies = load_data_from_file("ml-0.1m")
 
 algo = SVDRecommender(PRODUCTION, FORCE_TRAINING)
 algo.init_data(ratings, movies)
@@ -39,6 +39,7 @@ def get_recommendations(user_id: int, top_n: int = Query(..., gt=0)):
     """
     print(f"Getting recommendations for user {user_id} with top_n={top_n}")
     return algo.get_recommendations(user_id=user_id, top_n=top_n)
+
 
 @app.get("/cold_recommendations")
 def get_cold_recommendations(top_n: int = Query(..., gt=0)):

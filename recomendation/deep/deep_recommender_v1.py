@@ -38,6 +38,8 @@ class DeepRecommender(Model):
     def __init__(self, production, force_training):
         super().__init__(production, force_training)
         self.model = None
+        self.threshold = 3.5
+
         self.user_data = None
         self.movie_data = None
         self.training_data = None
@@ -84,6 +86,7 @@ class DeepRecommender(Model):
                 tf.keras.layers.Embedding(
                     self.user_vocab.vocab_size(), self.embedding_dim
                 ),
+                tf.keras.layers.Lambda(lambda x: tf.math.l2_normalize(x, axis=1)),
             ]
         )
 
@@ -93,8 +96,10 @@ class DeepRecommender(Model):
                 tf.keras.layers.Embedding(
                     self.movie_vocab.vocab_size(), self.embedding_dim
                 ),
+                tf.keras.layers.Lambda(lambda x: tf.math.l2_normalize(x, axis=1)),
             ]
         )
+
         self.ranking_model = tf.keras.Sequential(
             [
                 tf.keras.layers.Dense(256, activation="relu"),
@@ -133,6 +138,18 @@ class DeepRecommender(Model):
     def load_impl(self):
         pass
 
+    def convert_scores(self, score):
+        """
+        Convert scores to a list of floats.
+        Args:
+            scores (tf.Tensor): Tensor of scores.
+        Returns:
+            list: List of float scores.
+        """
+        if score < 0:
+            score += 1
+        return score * self.max
+
     def predict(self, user_id, candidates):
         # Convertir movieIds en chaînes
         candidates_str = [str(c) for c in candidates]
@@ -157,8 +174,19 @@ class DeepRecommender(Model):
         # Prédire pour l'utilisateur
         k = len(candidates)
         scores, recommended_movies = temp_index(tf.constant([str(user_id)]), k=k)
-        recommended_movies = recommended_movies[0, :].numpy()
 
+        recommended_movies = recommended_movies[0, :].numpy()
+        scores = scores[0, :].numpy()
+        scores = [self.convert_scores(s) for s in scores]
+        if user_id == 2 or user_id == "2":
+            print(f"Recommended movies for user {user_id}: {recommended_movies}")
+            print(f"Scores: {scores}")
+        recommendations = list(zip(recommended_movies, scores))
+        recommendations = list(
+            filter(lambda x: x[1] >= self.threshold, recommendations)
+        )
+        recommendations.sort(key=lambda x: x[1], reverse=True)
+        recommended_movies = [x[0] for x in recommendations]
         return [int(m.decode("utf-8")) for m in recommended_movies]
 
 
