@@ -4,7 +4,7 @@ import pickle
 import random as rd
 import copy
 
-from dbscan_generation import dbscan_clustering
+from .dbscan_generation import dbscan_clustering
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from model import Model

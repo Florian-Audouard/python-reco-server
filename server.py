@@ -49,4 +49,4 @@ def get_cold_recommendations(top_n: int = Query(..., gt=0)):
     Returns:
         List of recommended items
     """
-    return algo.get_recommendations(user_id=None, top_n=top_n)
+    return cold_algo.get_recommendations(user_id=None, top_n=top_n)

@@ -11,3 +11,4 @@ pandas
 scikit-learn
 umap
 sentence-transformers
+torch
