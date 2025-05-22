@@ -9,6 +9,6 @@ numpy<2
 scikit-surprise
 pandas
 scikit-learn
-umap
+umap_learn
 sentence-transformers
 torch
