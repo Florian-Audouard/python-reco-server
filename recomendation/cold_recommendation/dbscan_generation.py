@@ -42,20 +42,6 @@ def get_description_of_movie(synopsis):
     """
     return model.encode(synopsis)
 
-def get_movie_release(date):
-    """
-    Extracts the year, month, and day from a release date string.
-
-    Args:
-        date (str): Release date in the format "YYYY-MM-DD ...".
-
-    Returns:
-        list: [year, month, day] as integers.
-    """
-    release_date = date.split(" ")[0]
-    year, month, day = release_date.split("-")
-    return [int(year), int(month), int(day)]
-
 def get_movie_and_binary_vector(movies):
     """
     Converts movie genres into binary vectors for each movie.
@@ -93,13 +79,11 @@ def extract_data_and_movies_id(ratings, movies):
     def extract_data_from_row(index_row):
         index, row = index_row
         movie_id = row["movieId"]
-        date = row["released"]
-
         statistics = get_statistic_of_movie(ratings, movie_id)
         data = [statistics,
                 descriptions[index],
                 movies_and_binary_vector[movie_id],
-                get_movie_release(date)]
+                [row["year"], row["month"], row["day"]]]
         return np.concatenate(data), [movie_id, statistics[0], statistics[1]]
     
     with ThreadPoolExecutor(max_workers=10) as executor:
