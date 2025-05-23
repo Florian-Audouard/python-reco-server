@@ -5,8 +5,12 @@ import random as rd
 import copy
 import pandas as pd
 import math
-from dbscan_generation import dbscan_clustering
 from concurrent.futures import ThreadPoolExecutor
+
+try:
+    from .dbscan_generation import dbscan_clustering
+except ImportError:
+    from dbscan_generation import dbscan_clustering
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from model import Model
@@ -94,7 +98,7 @@ class DBSCANRecommender(Model):
         else : 
             def generate_utility_value(movie):
                 average_rate = movie[1]
-                return (movie[0], math.exp(-0.*average_rate**2))
+                return (movie[0], math.exp(-0.2*average_rate**2))
             
             total_value = 0
             probabilities = []
@@ -196,6 +200,6 @@ class DBSCANRecommender(Model):
         }
 
 if __name__ == "__main__":
-    recommender = DBSCANRecommender(False, True)
+    recommender = DBSCANRecommender(False, False)
     ratings, movies = load_data_from_file(f"ml-{FOLDER_SET}m")
     recommender.testing_main(ratings, movies)

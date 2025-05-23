@@ -42,8 +42,6 @@ def get_movie_and_binary_vector(movies):
         dict: {movieId: binary genre vector}
     """
     genre_vector = dict()
-    actor_vector = dict()
-
     genre_by_movies = [row["genre"].split("|") for _, row in movies.iterrows()]
     genre_binary_vector = mlb.fit_transform(genre_by_movies)
     for i, movie_id in enumerate(movies["movieId"]):

@@ -1,5 +1,6 @@
 import tensorflow as tf
 import tensorflow_recommenders as tfrs
+from RankingModel import RankingModel
 
 
 class MovieModel(tfrs.models.Model):
