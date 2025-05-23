@@ -17,6 +17,22 @@ URL_MOVIE = "http://localhost:8080/movie/file"
 FOLDER = "data"
 
 
+def delete_unknow_movie_in_ratings(ratings, movies):
+    """
+    Delete unknown movies in ratings DataFrame.
+
+    Args:
+        ratings (pd.DataFrame): DataFrame containing ratings data.
+        movies (pd.DataFrame): DataFrame containing movies data.
+
+    Returns:
+        pd.DataFrame: Updated ratings DataFrame with unknown movies removed.
+    """
+    # Remove unknown movies from ratings
+    unknown_movies = set(ratings["movieId"]) - set(movies["movieId"])
+    return ratings[~ratings["movieId"].isin(unknown_movies)]
+
+
 def load_data_from_file(folder):
     """
     Load movies, ratings, and tags data from CSV files.
@@ -33,15 +49,9 @@ def load_data_from_file(folder):
     os.makedirs(data_dir, exist_ok=True)
 
     full_path = os.path.join(data_dir, folder)
-    ratings = pd.read_csv(
-        os.path.join(full_path, "ratings.csv"),
-        dtype={"rating": "float32"},
-        names=["userId", "movieId", "rating", "timestamp"],
-        index_col=None,
-        header=0,
-    )
+    ratings = pd.read_csv(os.path.join(full_path, "ratings.csv"))
     movies = pd.read_csv(os.path.join(full_path, "movies.csv"))
-
+    ratings = delete_unknow_movie_in_ratings(ratings, movies)
     return ratings, movies
 
 
@@ -60,7 +70,7 @@ def load_data_from_url():
 
         ratings = future_ratings.result()
         movies = future_movies.result()
-
+    ratings = delete_unknow_movie_in_ratings(ratings, movies)
     return ratings, movies
 
 
