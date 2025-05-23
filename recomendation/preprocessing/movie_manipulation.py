@@ -1,6 +1,7 @@
 import sys
 import os
 import pandas as pd
+import time
 import requests
 from io import StringIO
 from sklearn.model_selection import train_test_split
@@ -10,8 +11,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")
 
 from utils.time_util import get_time_func
 
-URL_RATING = "http://localhost:8080/rating/file"
-URL_MOVIE = "http://localhost:8080/movie/file"
+URL_RATING = "http://quarkus-app:8080/rating/file"
+URL_MOVIE = "http://quarkus-app:8080/movie/file"
 
 
 FOLDER = "data"
