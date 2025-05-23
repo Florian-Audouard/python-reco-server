@@ -4,13 +4,14 @@ Module de recommandation de films basé sur une approche hybride (filtrage colla
 
 import os
 import sys
-from surprise import SVD
+from surprise import SVD, Dataset, Reader
 import joblib
+from collections import defaultdict
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from model import Model
-from preprocessing.movie_manipulation import load_data
+from preprocessing.movie_manipulation import load_data_from_file
 
 
 FORCE_TRAINING = True
@@ -26,13 +27,28 @@ class SVDRecommender(Model):
         super().__init__(production, force_training)
         self.model = None
         self.filename = "svd_model.joblib"
+        self.surprise_trainset = None
+        self.surprise_validation_set = None
+        self.threshold = 3.5
+
+    def init_data_impl(self):
+        reader = Reader(rating_scale=(self.min, self.max))
+        self.surprise_trainset = Dataset.load_from_df(
+            self.trainset[["userId", "movieId", "rating"]], reader
+        ).build_full_trainset()
+        if self.validation_set is not None:
+            self.surprise_validation_set = list(
+                self.validation_set[["userId", "movieId", "rating"]].itertuples(
+                    index=False, name=None
+                )
+            )
 
     def training_impl(self):
         """
         Train the SVD model using the initialized data
         """
         self.model = SVD()
-        self.model.fit(self.trainset)
+        self.model.fit(self.surprise_trainset)
 
     def save(self):
         """
@@ -65,14 +81,17 @@ class SVDRecommender(Model):
             float: Predicted rating
         """
         results = []
+        user_id = str(user_id)
+
         for movie_id in candidates:
-            pred_rating = self.model.predict(user_id, movie_id).est
-
-            results.append((int(movie_id), float(pred_rating)))
-
+            pred_rating = self.model.predict(user_id, movie_id)
+            results.append((int(movie_id), float(pred_rating.est)))
+        results = list(filter(lambda x: x[1] >= self.threshold, results))
+        results.sort(key=lambda x: x[1], reverse=True)
+        results = [x[0] for x in results]
         return results
 
-    def get_recommendations(self, user_id, top_n):
+    def get_recommendations_impl(self, user_id, top_n):
         """
         Generate hybrid recommendations for a given user
         Args:
@@ -84,19 +103,9 @@ class SVDRecommender(Model):
         if self.model is None:
             raise RuntimeError("Model not initialized or trained")
 
-        return super().get_recommendations(user_id, top_n)
-
-    def get_prediction_set(self):
-        """
-        Generate a set of predictions for the validation set
-        Returns:
-            list: List of (user_id, movie_id, actual_rating) tuples
-        """
-        return self.model.test(self.validation_set)
-
 
 if __name__ == "__main__":
     # Exemple d'utilisation
     recommender = SVDRecommender(False, FORCE_TRAINING)
-    data = load_data(f"ml-{FOLDER_SET}m")
-    recommender.testing_main(data)
+    ratings, movies = load_data_from_file(f"ml-{FOLDER_SET}m")
+    recommender.testing_main(ratings, movies)

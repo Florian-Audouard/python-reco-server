@@ -8,5 +8,7 @@ requests
 numpy<2
 scikit-surprise
 pandas
-scipy.sparse
-itertools
+scikit-learn
+umap_learn
+sentence-transformers
+torch
