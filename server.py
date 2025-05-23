@@ -5,6 +5,14 @@ from recomendation.cold_recommendation.dbscan_recommender import DBSCANRecommend
 from recomendation.svd.svd_recommender import SVDRecommender
 from recomendation.preprocessing.movie_manipulation import load_data_from_url
 
+
+
+"""
+TODO: faire un app.get : initialisation de l'algo
+ne plus de faire un init_algo dans le main
+"""
+
+
 app = FastAPI()
 
 
