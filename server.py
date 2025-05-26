@@ -1,38 +1,41 @@
 from fastapi import FastAPI, Query, File, UploadFile
-
+from fastapi.responses import JSONResponse
 
 from recomendation.cold_recommendation.dbscan_recommender import DBSCANRecommender
 from recomendation.svd.svd_recommender import SVDRecommender
 from recomendation.preprocessing.movie_manipulation import load_data_from_url
 
-
-
-"""
-TODO: faire un app.get : initialisation de l'algo
-ne plus de faire un init_algo dans le main
-"""
-
-
-app = FastAPI()
-
-
+DATA_LOADED = False
 FORCE_TRAINING = False
 PRODUCTION = True
 
-ratings, movies = load_data_from_url()
+app = FastAPI()
 
 algo = SVDRecommender(PRODUCTION, FORCE_TRAINING)
-algo.init_data(ratings, movies)
-algo.load()
-
 cold_algo = DBSCANRecommender(PRODUCTION, FORCE_TRAINING)
-cold_algo.init_data(ratings, movies)
-cold_algo.load()
+
 
 
 @app.get("/")
 def read_root():
     return "Welcome to the Movie Recommender API!"
+
+
+@app.post("/init_recommendation")
+def init_recommender_endpoint():
+    global DATA_LOADED
+
+    if not DATA_LOADED:
+        ratings, movies = load_data_from_url()
+        algo.init_data(ratings, movies)
+        algo.load()
+
+        cold_algo.init_data(ratings, movies)
+        cold_algo.load()
+
+        DATA_LOADED = True
+
+    return JSONResponse(content={"status": "initialized"}, status_code=200)
 
 
 @app.get("/recommendations/{user_id}")

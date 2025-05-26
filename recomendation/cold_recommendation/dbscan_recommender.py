@@ -121,7 +121,7 @@ class DBSCANRecommender(Model):
         return selected_movies_id
     
     def init_data_impl(self):
-        return 
+        self.training_impl()
     
     def predict(self, user_id, candidates):
         return 

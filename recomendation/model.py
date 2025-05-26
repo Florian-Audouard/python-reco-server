@@ -110,6 +110,7 @@ class Model(ABC):
         # Split the data into trainset and validation set
         if self.production:
             self.trainset = ratings
+            self.init_data_impl()
             return
         self.trainset, self.validation_set = train_test_split(
             self.ratings,
