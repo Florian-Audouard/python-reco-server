@@ -48,7 +48,7 @@ class RandomRecommender(Model):
         random.shuffle(movie_ids)
         size = len(candidates)
         size = random.randint(1, size) if size > 0 else 0
-        return movie_ids[:size]
+        return movie_ids
 
     def get_recommendations_impl(self, user_id, top_n):
         # Rien à faire ici car la logique est dans predict

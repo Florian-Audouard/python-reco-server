@@ -2,6 +2,8 @@ import os
 import sys
 from abc import ABC, abstractmethod
 import pandas as pd
+from sklearn.model_selection import train_test_split
+from tqdm import tqdm
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -109,7 +111,12 @@ class Model(ABC):
         if self.production:
             self.trainset = ratings
             return
-        self.trainset, self.validation_set = smart_split(ratings, test_size=0.2)
+        self.trainset, self.validation_set = train_test_split(
+            self.ratings,
+            test_size=0.2,
+            random_state=3,
+            stratify=self.ratings.rating.values,
+        )
         self.init_data_impl()
 
     @get_time_func
@@ -198,8 +205,6 @@ class Model(ABC):
 
     def get_pres_recall(self, user, note, top_n):
         candidates = self.validation_set[self.validation_set["userId"] == user]
-        if user == "3" or user == 3:
-            print(candidates)
         relevant_items = set(
             candidates[candidates["rating"] >= note]["movieId"].unique()
         )
@@ -208,6 +213,15 @@ class Model(ABC):
             self.get_recommendations_with_candidates(user, candidates, -1)
         )
         hits = recommendations.intersection(relevant_items)
+        if user == 3:
+            log.info(
+                "User %s: Candidates %s, Relevant items: %s, Recommendations: %s, Hits: %s",
+                user,
+                candidates,
+                relevant_items,
+                recommendations,
+                hits,
+            )
         precision = len(hits) / len(recommendations) if recommendations else 0
         recall = len(hits) / len(relevant_items) if relevant_items else 0
         return precision, recall
@@ -220,7 +234,9 @@ class Model(ABC):
             self.threshold = note
         precisions = []
         recalls = []
-        for user in self.validation_set["userId"].unique():
+        for user in tqdm(
+            self.validation_set["userId"].unique(), desc="Calculating accuracy"
+        ):
 
             precision, recall = self.get_pres_recall(user, note, top_n)
             precisions.append(precision)

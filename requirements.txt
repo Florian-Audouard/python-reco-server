@@ -11,4 +11,6 @@ pandas
 scikit-learn
 umap_learn
 sentence-transformers
-torch
+
+# --index-url https://download.pytorch.org/whl/cu128
+torch 
