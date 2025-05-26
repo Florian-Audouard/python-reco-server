@@ -24,17 +24,15 @@ class RecommenderModel(nn.Module):
         self.movie_embedding = nn.Embedding(
             num_embeddings=self.num_movies, embedding_dim=self.embedding_size
         )
-
-        # Hidden layers
-        # 384 is for all-MiniLM-L6-v2
-        self.fc1 = nn.Linear(2 * self.embedding_size + 384, self.hidden_dim)
-        self.fc2 = nn.Linear(self.hidden_dim, 1)
-
-        # Dropout layer
-        self.dropout = nn.Dropout(p=dropout_rate)
-
-        # Activation function
-        self.relu = nn.ReLU()
+        self.linear_relu_stack = nn.Sequential(
+            nn.Linear(2 * self.embedding_size + 384, 256),
+            nn.ReLU(),
+            nn.Linear(256, 128),
+            nn.ReLU(),
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.Linear(64, 1),
+        )
 
     def forward(self, users, movies, plot_embeddings):
         # Embeddings
@@ -44,9 +42,7 @@ class RecommenderModel(nn.Module):
         movie_combined = torch.cat([movie_embedded, plot_embeddings], dim=1)
         # Concatenate user and movie embeddings
         combined = torch.cat([user_embedded, movie_combined], dim=1)
-        # Pass through hidden layers with ReLU activation and dropout
-        x = self.relu(self.fc1(combined))
-        x = self.dropout(x)
-        output = self.fc2(x)
+
+        output = self.linear_relu_stack(combined)
 
         return output

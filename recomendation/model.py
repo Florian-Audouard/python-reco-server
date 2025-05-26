@@ -90,6 +90,17 @@ class Model(ABC):
         """
         pass
 
+    def accuracy_impl(self):
+        """
+        Calculate the accuracy of the model
+        Args:
+            top_n: Number of recommendations to consider
+            note: Threshold rating to consider a movie relevant
+        Returns:
+            Dictionary with precision, recall, and F1 score
+        """
+        return {}
+
     @get_time_func
     def init_data(self, ratings, movies):
         """
@@ -205,6 +216,8 @@ class Model(ABC):
 
     def get_pres_recall(self, user, note, top_n):
         candidates = self.validation_set[self.validation_set["userId"] == user]
+        if user == 3:
+            log.info("Candidates for user %s:\n %s", user, candidates)
         relevant_items = set(
             candidates[candidates["rating"] >= note]["movieId"].unique()
         )
@@ -213,15 +226,6 @@ class Model(ABC):
             self.get_recommendations_with_candidates(user, candidates, -1)
         )
         hits = recommendations.intersection(relevant_items)
-        if user == 3:
-            log.info(
-                "User %s: Candidates %s, Relevant items: %s, Recommendations: %s, Hits: %s",
-                user,
-                candidates,
-                relevant_items,
-                recommendations,
-                hits,
-            )
         precision = len(hits) / len(recommendations) if recommendations else 0
         recall = len(hits) / len(relevant_items) if relevant_items else 0
         return precision, recall
@@ -254,4 +258,4 @@ class Model(ABC):
                 if avg_precision + avg_recall > 0
                 else 0
             ),
-        }
+        } | self.accuracy_impl()
