@@ -3,9 +3,7 @@ import sys
 import pickle
 import random as rd
 import copy
-import pandas as pd
 import math
-from concurrent.futures import ThreadPoolExecutor
 
 try:
     from .dbscan_generation import dbscan_clustering
@@ -39,22 +37,10 @@ class DBSCANRecommender(Model):
             average_rate = self.ratings[self.ratings["movieId"] == movie_id]["rating"].mean()
             if number_of_watch <= self.limit_watch or average_rate >= self.limit_rate:
                 recommendable_movies.add(movie_id)
-        self.recommendable_movies = recommendable_movies
-        label_and_movies_data = dbscan_clustering(self.ratings, self.movies, self.recommendable_movies)
-
-        def sort_cluster(cluster_items):
-            key = cluster_items[0]
-            cluster = cluster_items[1]
-            return (key, sorted(cluster, key=lambda x: (x[1], -x[2]), reverse=True))
         
-        with ThreadPoolExecutor(max_workers=10) as executor:
-            results = executor.map(
-                sort_cluster,
-                label_and_movies_data.items()
-                )
+        label_and_movies_data = dbscan_clustering(self.ratings, self.movies, recommendable_movies)
 
-        for key, sorted_cluster in results:
-            label_and_movies_data[key] = sorted_cluster
+        self.recommendable_movies = recommendable_movies
         self.model = label_and_movies_data
 
     def save(self):
