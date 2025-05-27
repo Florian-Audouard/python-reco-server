@@ -2,8 +2,8 @@ import os
 import sys
 import pickle
 import random as rd
-import copy
 import math
+import numpy as np
 
 try:
     from .dbscan_generation import dbscan_clustering
@@ -52,7 +52,6 @@ class DBSCANRecommender(Model):
                 "recommendable_movies": self.recommendable_movies
             }, f)
 
-
     def load_impl(self):
         os.makedirs(self.data_dir, exist_ok=True)
         with open(self.get_full_path(), "rb") as f:
@@ -64,62 +63,39 @@ class DBSCANRecommender(Model):
         """
         Selects a random movie from a random cluster in the model memory, 
         with logic based on the mean rating and number of watches.
-
-        Args:
-            model_memory (dict): {label: list of (movieId, mean, number_of_watch)}
-
-        Returns:
-            tuple: (label, selected_list, selected_movie, index_to_remove)
-                - label: the chosen cluster label
-                - selected_list: the list of movies in the chosen cluster
-                - selected_movie: the selected (movieId, mean, number_of_watch) tuple or None
-                - index_to_remove: index of the selected movie in selected_list or None
         """
 
         label = rd.choice(list(model_memory.keys()))
         selected_list = model_memory[label]
 
-        if len(selected_list) == 0:
+        if not selected_list:
             return label, None, None, None
-        else : 
-            def generate_utility_value(movie):
-                average_rate = movie[1]
-                return (movie[0], math.exp(-0.2*average_rate**2))
-            
-            total_value = 0
-            probabilities = []
 
-            rd.shuffle(selected_list)
-            for index, movie in enumerate(selected_list):
-                movie_id, utility_value = generate_utility_value(movie)
-                total_value += utility_value
-                if index == 0:
-                    probabilities.append((movie_id, utility_value))
-                else:
-                    probabilities.append((movie_id, utility_value + probabilities[index - 1][1]))
-            
-            random_value = rd.uniform(0, total_value)
-            for index in range(len(probabilities)):
-                if random_value <= probabilities[index][1]:
-                    return label, selected_list, probabilities[index][0], index
+        # Utilité basée sur la moyenne
+        utilities = np.array([math.exp(-0.2 * movie[1] ** 2) for movie in selected_list])
+        probabilities = utilities / utilities.sum()
+        idx = np.random.choice(len(selected_list), p=probabilities)
+        selected_movie = selected_list[idx][0]
+        return label, selected_list, selected_movie, idx
 
-    def get_recommendations(self, user_id , top_n):
-        model_memory = copy.deepcopy(self.model)
+    def get_recommendations(self, user_id, top_n):
+        # Copie uniquement les listes de clusters, pas tout le dict
+        model_memory = {k: v.copy() for k, v in self.model.items()}
         selected_movies_id = []
         all_movies_id = self.ratings["movieId"].unique()
         if top_n > len(all_movies_id):
-            return all_movies_id
-        while len(selected_movies_id) < top_n and len(model_memory) > 0:
-            if len(model_memory) == 0:
-                break 
+            return all_movies_id.tolist()
+        while len(selected_movies_id) < top_n and model_memory:
             label, selected_list, selected_movie, index_to_remove = self.get_select_random_movie(model_memory)
             if selected_list is None:
                 del model_memory[label]
                 continue
             selected_movies_id.append(selected_movie)
             selected_list.pop(index_to_remove)
+            if not selected_list:
+                del model_memory[label]
         return selected_movies_id
-    
+
     def init_data_impl(self):
         self.training_impl()
     
@@ -136,10 +112,9 @@ class DBSCANRecommender(Model):
                 not_watch_movies.add(movie_id)
             if len(genres) != 0:
                 genres_list_recommended.update(genres[0].split("|"))
-        genre_diversity = len(set(genres_list_recommended))
+        genre_diversity = len(genres_list_recommended)
         unknown_recommended_movies = len(not_watch_movies)
         return genre_diversity, unknown_recommended_movies
-    
 
     def accuracy(self, k=30):
         if self.validation_set is None:
@@ -157,35 +132,32 @@ class DBSCANRecommender(Model):
             if number_of_watch <= self.limit_watch:
                 different_unknown_movies.add(movie_id)
             if movie_id in self.recommendable_movies and len(genres) != 0:
-                    different_genre_in_recommendation.update(genres[0].split("|"))
+                different_genre_in_recommendation.update(genres[0].split("|"))
 
         number_of_genre_in_db = len(different_genre_in_db)
         number_of_genre_in_recommendation = len(different_genre_in_recommendation)
         number_of_unknown_movies = len(different_unknown_movies)
         number_of_movies = len(self.recommendable_movies)
 
-
         recommended_diversity = set()
         genre_diversity = []
         unknown_diversity = []
 
         for user_id in self.validation_set["userId"].unique():
-            
             recommendations = self.get_recommendations(user_id, k)
             genre_diversity_recommended, unknown_recommended_movies = self.get_diversity(recommendations)
-
             recommended_diversity.update(recommendations)
             genre_diversity.append(genre_diversity_recommended)
             unknown_diversity.append(unknown_recommended_movies)
 
         return {
-            "mean genre diversity": sum(genre_diversity) / (len(genre_diversity)*number_of_genre_in_db),
-            "mean genre inner diversity": sum(genre_diversity) / (len(genre_diversity)*number_of_genre_in_recommendation),
-            "mean unknown selection": sum(unknown_diversity) / (len(unknown_diversity)*number_of_unknown_movies),
-            "coverage": len(recommended_diversity) / number_of_movies
+            "mean genre diversity": sum(genre_diversity) / (len(genre_diversity)*number_of_genre_in_db) if number_of_genre_in_db else 0,
+            "mean genre inner diversity": sum(genre_diversity) / (len(genre_diversity)*number_of_genre_in_recommendation) if number_of_genre_in_recommendation else 0,
+            "mean unknown selection": sum(unknown_diversity) / (len(unknown_diversity)*number_of_unknown_movies) if number_of_unknown_movies else 0,
+            "coverage": len(recommended_diversity) / number_of_movies if number_of_movies else 0
         }
 
 if __name__ == "__main__":
-    recommender = DBSCANRecommender(False, False)
+    recommender = DBSCANRecommender(False, True)
     ratings, movies = load_data_from_file(f"ml-{FOLDER_SET}m")
     recommender.testing_main(ratings, movies)

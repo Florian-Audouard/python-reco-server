@@ -57,7 +57,7 @@ def load_data_from_file(folder):
 
 
 def fetch_csv_from_url(url):
-    response = requests.get(url, timeout=20)
+    response = requests.get(url, timeout=20_000)
     return pd.read_csv(StringIO(response.text))
 
 
