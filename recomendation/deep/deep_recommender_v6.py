@@ -53,11 +53,11 @@ class RandomRecommender(Model):
         self.model = NeuralColabFilteringNet(user_count, movie_count)
 
     def save(self):
-        # Rien à sauvegarder pour un modèle aléatoire
+
         pass
 
     def load_impl(self):
-        # Rien à charger pour un modèle aléatoire
+
         pass
 
     def training_impl(self):
@@ -73,12 +73,11 @@ class RandomRecommender(Model):
         min_loss = np.inf
         min_loss_model_weights = None
         history = []
-        iterations_per_epoch = int(math.ceil(len(self.datasets["train"]) // batch_size))
         min_epoch_number = 1
         epoch_start_time = 0
         loss_criterion = nn.MSELoss(reduction="sum")
         optimizer = optim.Adam(self.model.parameters(), lr=lr, weight_decay=wd)
-        print(f"Starting training loop...")
+        print("Starting training loop...")
         training_start_time = time.perf_counter()
         for epoch in range(max_epochs):
             stats = {"epoch": epoch + 1, "total": max_epochs}
@@ -88,7 +87,6 @@ class RandomRecommender(Model):
                 is_training = phase == "train"
                 self.model.train(is_training)
                 running_loss = 0.0
-                n_batches = 0
 
                 # Iterate on train/test datasets in batches
                 for x_batch, y_batch in DatasetBatchIterator(
@@ -159,11 +157,6 @@ class RandomRecommender(Model):
         res = []
         for movie_id, prediction in zip(candidates, predictions):
             res.append((int(movie_id), prediction.item()))
-
-        if user_id == 3 or user_id == "3":
-            print(f"Predictions for user {user_id}:")
-            for movie, rating in res:
-                print(f"Movie ID: {movie}, Predicted Rating: {rating}")
 
         res = list(filter(lambda x: x[1] >= self.threshold, res))
         res.sort(key=lambda x: x[1], reverse=True)

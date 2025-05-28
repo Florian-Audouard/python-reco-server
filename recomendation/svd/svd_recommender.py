@@ -28,7 +28,6 @@ class SVDRecommender(Model):
         self.model = None
         self.filename = "svd_model.joblib"
         self.surprise_trainset = None
-        self.surprise_validation_set = None
         self.threshold = 3.5
 
     def init_data_impl(self):
@@ -36,12 +35,6 @@ class SVDRecommender(Model):
         self.surprise_trainset = Dataset.load_from_df(
             self.trainset[["userId", "movieId", "rating"]], reader
         ).build_full_trainset()
-        if self.validation_set is not None:
-            self.surprise_validation_set = list(
-                self.validation_set[["userId", "movieId", "rating"]].itertuples(
-                    index=False, name=None
-                )
-            )
 
     def training_impl(self):
         """
@@ -84,9 +77,10 @@ class SVDRecommender(Model):
         user_id = str(user_id)
 
         for movie_id in candidates:
-            pred_rating = self.model.predict(user_id, movie_id)
+            pred_rating = self.model.predict(int(user_id), int(movie_id))
             results.append((int(movie_id), float(pred_rating.est)))
         results = list(filter(lambda x: x[1] >= self.threshold, results))
+
         results.sort(key=lambda x: x[1], reverse=True)
         results = [x[0] for x in results]
         return results

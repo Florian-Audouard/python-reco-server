@@ -90,6 +90,17 @@ class Model(ABC):
         """
         pass
 
+    def accuracy_impl(self):
+        """
+        Calculate the accuracy of the model
+        Args:
+            top_n: Number of recommendations to consider
+            note: Threshold rating to consider a movie relevant
+        Returns:
+            Dictionary with precision, recall, and F1 score
+        """
+        return {}
+
     @get_time_func
     def init_data(self, ratings, movies):
         """
@@ -110,6 +121,7 @@ class Model(ABC):
         # Split the data into trainset and validation set
         if self.production:
             self.trainset = ratings
+            self.init_data_impl()
             return
         self.trainset, self.validation_set = train_test_split(
             self.ratings,
@@ -127,7 +139,7 @@ class Model(ABC):
         full_path = self.get_full_path()
         train = False
         if not os.path.exists(full_path):
-            log.error("File %s does not exist", full_path)
+            log.warning("File %s does not exist", full_path)
             train = True
         if self.force_training:
             log.info("FORCE TRAINING MODE")
@@ -213,15 +225,6 @@ class Model(ABC):
             self.get_recommendations_with_candidates(user, candidates, -1)
         )
         hits = recommendations.intersection(relevant_items)
-        if user == 3:
-            log.info(
-                "User %s: Candidates %s, Relevant items: %s, Recommendations: %s, Hits: %s",
-                user,
-                candidates,
-                relevant_items,
-                recommendations,
-                hits,
-            )
         precision = len(hits) / len(recommendations) if recommendations else 0
         recall = len(hits) / len(relevant_items) if relevant_items else 0
         return precision, recall
@@ -254,4 +257,4 @@ class Model(ABC):
                 if avg_precision + avg_recall > 0
                 else 0
             ),
-        }
+        } | self.accuracy_impl()
