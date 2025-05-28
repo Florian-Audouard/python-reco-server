@@ -1,10 +1,9 @@
-from fastapi import FastAPI, Query, File, UploadFile
+from fastapi import FastAPI, Query
 
 
 from recomendation.cold_recommendation.dbscan_recommender import DBSCANRecommender
 from recomendation.svd.svd_recommender import SVDRecommender
 from recomendation.preprocessing.movie_manipulation import load_data_from_url
-
 
 
 """
@@ -46,7 +45,9 @@ def get_recommendations(user_id: int, top_n: int = Query(..., gt=0)):
         List of recommended items
     """
     print(f"Getting recommendations for user {user_id} with top_n={top_n}")
-    return algo.get_recommendations(user_id=user_id, top_n=top_n)
+    res = algo.get_recommendations(user_id=user_id, top_n=top_n)
+    print(movies[movies["movieId"].isin(res)]["title"].tolist())
+    return res
 
 
 @app.get("/cold_recommendations")

@@ -121,6 +121,7 @@ class Model(ABC):
         # Split the data into trainset and validation set
         if self.production:
             self.trainset = ratings
+            self.init_data_impl()
             return
         self.trainset, self.validation_set = train_test_split(
             self.ratings,
@@ -138,7 +139,7 @@ class Model(ABC):
         full_path = self.get_full_path()
         train = False
         if not os.path.exists(full_path):
-            log.error("File %s does not exist", full_path)
+            log.warning("File %s does not exist", full_path)
             train = True
         if self.force_training:
             log.info("FORCE TRAINING MODE")
@@ -216,8 +217,6 @@ class Model(ABC):
 
     def get_pres_recall(self, user, note, top_n):
         candidates = self.validation_set[self.validation_set["userId"] == user]
-        if user == 3:
-            log.info("Candidates for user %s:\n %s", user, candidates)
         relevant_items = set(
             candidates[candidates["rating"] >= note]["movieId"].unique()
         )

@@ -84,9 +84,10 @@ class SVDRecommender(Model):
         user_id = str(user_id)
 
         for movie_id in candidates:
-            pred_rating = self.model.predict(user_id, movie_id)
+            pred_rating = self.model.predict(int(user_id), int(movie_id))
             results.append((int(movie_id), float(pred_rating.est)))
         results = list(filter(lambda x: x[1] >= self.threshold, results))
+
         results.sort(key=lambda x: x[1], reverse=True)
         results = [x[0] for x in results]
         return results

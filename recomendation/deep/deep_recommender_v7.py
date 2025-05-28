@@ -111,8 +111,6 @@ class DeepLearningRecommender(Model):
         res = []
         for movie_id, prediction in zip(candidates, predictions):
             res.append((int(movie_id), self.__get_score(prediction)))
-        if user_id == 3:
-            print(f"User {user_id} predictions: {res}")
         res = list(filter(lambda x: x[1] >= self.threshold, res))
         res = sorted(res, key=lambda x: x[1], reverse=True)
         return [x[0] for x in res]
