@@ -2,8 +2,8 @@ import os
 import sys
 import pickle
 import random as rd
-import copy
 import math
+import numpy as np
 
 try:
     from .dbscan_generation import dbscan_clustering
@@ -54,6 +54,7 @@ class DBSCANRecommender(Model):
         if self.model is None:
             raise RuntimeError(self.ERROR_MESSAGE)
         with open(self.get_full_path(), "wb") as f:
+<<<<<<< HEAD
             pickle.dump(
                 {
                     "model": self.model,
@@ -61,6 +62,12 @@ class DBSCANRecommender(Model):
                 },
                 f,
             )
+=======
+            pickle.dump({
+                "model": self.model,
+                "recommendable_movies": self.recommendable_movies
+            }, f)
+>>>>>>> 233d657fe7659e730bba1436b0af27dd7298a9f2
 
     def load_impl(self):
         os.makedirs(self.data_dir, exist_ok=True)
@@ -73,23 +80,14 @@ class DBSCANRecommender(Model):
         """
         Selects a random movie from a random cluster in the model memory,
         with logic based on the mean rating and number of watches.
-
-        Args:
-            model_memory (dict): {label: list of (movieId, mean, number_of_watch)}
-
-        Returns:
-            tuple: (label, selected_list, selected_movie, index_to_remove)
-                - label: the chosen cluster label
-                - selected_list: the list of movies in the chosen cluster
-                - selected_movie: the selected (movieId, mean, number_of_watch) tuple or None
-                - index_to_remove: index of the selected movie in selected_list or None
         """
 
         label = rd.choice(list(model_memory.keys()))
         selected_list = model_memory[label]
 
-        if len(selected_list) == 0:
+        if not selected_list:
             return label, None, None, None
+<<<<<<< HEAD
         else:
 
             def generate_utility_value(movie):
@@ -127,16 +125,42 @@ class DBSCANRecommender(Model):
             label, selected_list, selected_movie, index_to_remove = (
                 self.get_select_random_movie(model_memory)
             )
+=======
+
+        # Utilité basée sur la moyenne
+        utilities = np.array([math.exp(-0.2 * movie[1] ** 2) for movie in selected_list])
+        probabilities = utilities / utilities.sum()
+        idx = np.random.choice(len(selected_list), p=probabilities)
+        selected_movie = selected_list[idx][0]
+        return label, selected_list, selected_movie, idx
+
+    def get_recommendations(self, user_id, top_n):
+        # Copie uniquement les listes de clusters, pas tout le dict
+        model_memory = {k: v.copy() for k, v in self.model.items()}
+        selected_movies_id = []
+        all_movies_id = self.ratings["movieId"].unique()
+        if top_n > len(all_movies_id):
+            return all_movies_id.tolist()
+        while len(selected_movies_id) < top_n and model_memory:
+            label, selected_list, selected_movie, index_to_remove = self.get_select_random_movie(model_memory)
+>>>>>>> 233d657fe7659e730bba1436b0af27dd7298a9f2
             if selected_list is None:
                 del model_memory[label]
                 continue
             selected_movies_id.append(selected_movie)
             selected_list.pop(index_to_remove)
+            if not selected_list:
+                del model_memory[label]
         return selected_movies_id
 
     def init_data_impl(self):
+<<<<<<< HEAD
         return
 
+=======
+        self.training_impl()
+    
+>>>>>>> 233d657fe7659e730bba1436b0af27dd7298a9f2
     def predict(self, user_id, candidates):
         return
 
@@ -152,7 +176,7 @@ class DBSCANRecommender(Model):
                 not_watch_movies.add(movie_id)
             if len(genres) != 0:
                 genres_list_recommended.update(genres[0].split("|"))
-        genre_diversity = len(set(genres_list_recommended))
+        genre_diversity = len(genres_list_recommended)
         unknown_recommended_movies = len(not_watch_movies)
         return genre_diversity, unknown_recommended_movies
 
@@ -186,17 +210,23 @@ class DBSCANRecommender(Model):
         unknown_diversity = []
 
         for user_id in self.validation_set["userId"].unique():
+<<<<<<< HEAD
 
             recommendations = self.get_recommendations(user_id, k)
             genre_diversity_recommended, unknown_recommended_movies = (
                 self.get_diversity(recommendations)
             )
 
+=======
+            recommendations = self.get_recommendations(user_id, k)
+            genre_diversity_recommended, unknown_recommended_movies = self.get_diversity(recommendations)
+>>>>>>> 233d657fe7659e730bba1436b0af27dd7298a9f2
             recommended_diversity.update(recommendations)
             genre_diversity.append(genre_diversity_recommended)
             unknown_diversity.append(unknown_recommended_movies)
 
         return {
+<<<<<<< HEAD
             "mean genre diversity": sum(genre_diversity)
             / (len(genre_diversity) * number_of_genre_in_db),
             "mean genre inner diversity": sum(genre_diversity)
@@ -204,10 +234,16 @@ class DBSCANRecommender(Model):
             "mean unknown selection": sum(unknown_diversity)
             / (len(unknown_diversity) * number_of_unknown_movies),
             "coverage": len(recommended_diversity) / number_of_movies,
+=======
+            "mean genre diversity": sum(genre_diversity) / (len(genre_diversity)*number_of_genre_in_db) if number_of_genre_in_db else 0,
+            "mean genre inner diversity": sum(genre_diversity) / (len(genre_diversity)*number_of_genre_in_recommendation) if number_of_genre_in_recommendation else 0,
+            "mean unknown selection": sum(unknown_diversity) / (len(unknown_diversity)*number_of_unknown_movies) if number_of_unknown_movies else 0,
+            "coverage": len(recommended_diversity) / number_of_movies if number_of_movies else 0
+>>>>>>> 233d657fe7659e730bba1436b0af27dd7298a9f2
         }
 
 
 if __name__ == "__main__":
-    recommender = DBSCANRecommender(False, False)
+    recommender = DBSCANRecommender(False, True)
     ratings, movies = load_data_from_file(f"ml-{FOLDER_SET}m")
     recommender.testing_main(ratings, movies)

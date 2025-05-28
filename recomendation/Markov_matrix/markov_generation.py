@@ -73,4 +73,4 @@ def get_user_vector(ratings, user_id, movieId_to_idx):
         if idx is not None:
             vec[idx] = 1
 
-    return vec/sum(vec)
+    return vec
