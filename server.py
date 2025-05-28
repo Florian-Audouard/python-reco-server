@@ -52,7 +52,7 @@ def get_recommendations(user_id: int, top_n: int = Query(..., gt=0)):
     return algo.get_recommendations(user_id=user_id, top_n=top_n)
 
 
-@app.get("/cold_recommendations")
+@app.get("/cold_recommendation")
 def get_cold_recommendations(top_n: int = Query(..., gt=0)):
     """
     Get cold recommendations for a given user
