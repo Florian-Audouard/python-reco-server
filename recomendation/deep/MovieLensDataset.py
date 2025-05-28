@@ -2,7 +2,6 @@ import torch
 from torch.utils.data import Dataset
 
 
-
 class MovieLensDataset(Dataset):
     """
     The Movie Lens Dataset class. This class prepares the dataset for training and validation.
@@ -31,18 +30,12 @@ class MovieLensDataset(Dataset):
 
     def __getitem__(self, idx):
         row = self.ratings_data.iloc[idx]
-        movie_id = row["movieId"]
         user = torch.tensor(self.user2idx[row["userId"]])
         movie = torch.tensor(self.movie2idx[row["movieId"]])
         rating = torch.tensor(row["rating"], dtype=torch.float32)
 
-        plot_embedding = self.movies_data.loc[
-            self.movies_data["movieId"] == movie_id, "plot_embedding"
-        ].values[0]
-
         return {
             "users": user,
             "movies": movie,
-            "plots": plot_embedding,
             "ratings": rating,
         }

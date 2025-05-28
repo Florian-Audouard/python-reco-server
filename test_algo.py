@@ -1,48 +1,47 @@
 import pandas as pd
-
+from concurrent.futures import ThreadPoolExecutor
 from recomendation.svd.svd_recommender import SVDRecommender
-from recomendation.preprocessing.movie_manipulation import load_data_from_file
+from recomendation.deep.deep_recommender_v6 import (
+    DeepLearningRecommender as DeepLearningRecommenderV6,
+)
+from recomendation.preprocessing.movie_manipulation import (
+    load_data_from_url,
+    load_data_from_url_noise,
+    change_host,
+)
 from io import StringIO
 import requests
 from utils.logger import log
 
 folder = "0.1"
-FORCE_TRAINING = False
+FORCE_TRAINING = True
 PRODUCTION = False
 
-ALGORITHM = SVDRecommender
+ALGORITHM = DeepLearningRecommenderV6
+
+change_host("localhost")
 
 
-def init_algo(data):
+def init_algo(ratings, movies, noise=False, real_data=None):
     """
     Initialize the algorithm
     """
 
-    algo = ALGORITHM(FORCE_TRAINING, folder)
-    algo.testing_main(data)
+    algo = ALGORITHM(PRODUCTION, FORCE_TRAINING, noise=noise, real_data=real_data)
+    algo.testing_main(ratings, movies)
     return algo
 
 
-def init_algo_from_file():
-    """
-    Initialize the algorithm from a file
-    """
-    log.info("Loading data from file\n")
-    data = load_data_from_file(f"ml-{folder}m")
-    return init_algo(data)
+ratings_clean, movies_clean = (None, None)
+ratings_noise, movies_noise = (None, None)
+with ThreadPoolExecutor(max_workers=2) as executor:
+    future_clean = executor.submit(load_data_from_url)
+    future_noise = executor.submit(load_data_from_url_noise)
 
+    ratings_clean, movies_clean = future_clean.result()
+    ratings_noise, movies_noise = future_noise.result()
 
-def init_algo_from_url():
-    """
-    Initialize the algorithm from a URL
-    """
-    log.info("Loading data from URL\n")
-    url = "http://localhost:8080/rating/file"
-    response = requests.get(url, timeout=20)
-    data = pd.read_csv(StringIO(response.text))
-    return init_algo(data)
-
-
-algo_bruit = init_algo_from_url()
+algo_claire = init_algo(ratings_clean, movies_clean, noise=False)
 print()
-algo_claire = init_algo_from_file()
+algo_bruit = init_algo(ratings_noise, movies_noise, noise=True, real_data=ratings_clean)
+print()

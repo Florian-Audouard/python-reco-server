@@ -23,8 +23,8 @@ class SVDRecommender(Model):
     SVDRecommender is a recommendation system model based on Singular Value Decomposition (SVD).
     """
 
-    def __init__(self, production, force_training):
-        super().__init__(production, force_training)
+    def __init__(self, production, force_training, noise=False, real_data=None):
+        super().__init__(production, force_training, noise=noise, real_data=real_data)
         self.model = None
         self.filename = "svd_model.joblib"
         self.surprise_trainset = None

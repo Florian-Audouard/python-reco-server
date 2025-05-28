@@ -13,11 +13,11 @@ from sklearn.model_selection import train_test_split
 
 import math
 
-from DatasetBatchIterator import DatasetBatchIterator
-from NeuralColabFilteringNet import NeuralColabFilteringNet
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), ".")))
+from DatasetBatchIterator import DatasetBatchIterator
+from NeuralColabFilteringNet import NeuralColabFilteringNet
 from model import Model
 from preprocessing.movie_manipulation import load_data_from_file
 
@@ -26,13 +26,13 @@ FORCE_TRAINING = True
 FOLDER_SET = "0.1"
 
 
-class RandomRecommender(Model):
+class DeepLearningRecommender(Model):
     """
     A simple recommendation model that returns random movies.
     """
 
-    def __init__(self, production=False, force_training=False):
-        super().__init__(production, force_training)
+    def __init__(self, production, force_training, noise=False, real_data=None):
+        super().__init__(production, force_training, noise=noise, real_data=real_data)
         self.filename = "random_recommender"
         self.datasets = None
         self.model = None
@@ -169,6 +169,6 @@ class RandomRecommender(Model):
 
 if __name__ == "__main__":
     # Exemple d'utilisation
-    recommender = RandomRecommender(False, FORCE_TRAINING)
+    recommender = DeepLearningRecommender(False, FORCE_TRAINING)
     ratings, movies = load_data_from_file(f"ml-{FOLDER_SET}m")
     recommender.testing_main(ratings, movies)

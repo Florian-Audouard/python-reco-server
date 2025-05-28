@@ -25,23 +25,22 @@ class RecommenderModel(nn.Module):
             num_embeddings=self.num_movies, embedding_dim=self.embedding_size
         )
         self.linear_relu_stack = nn.Sequential(
-            nn.Linear(2 * self.embedding_size + 384, 256),
-            nn.ReLU(),
-            nn.Linear(256, 128),
+            nn.Linear(2 * self.embedding_size, 128),
             nn.ReLU(),
             nn.Linear(128, 64),
             nn.ReLU(),
-            nn.Linear(64, 1),
+            nn.Linear(64, 32),
+            nn.ReLU(),
+            nn.Linear(32, 1),
         )
 
-    def forward(self, users, movies, plot_embeddings):
+    def forward(self, users, movies):
         # Embeddings
         user_embedded = self.user_embedding(users)
         movie_embedded = self.movie_embedding(movies)
 
-        movie_combined = torch.cat([movie_embedded, plot_embeddings], dim=1)
         # Concatenate user and movie embeddings
-        combined = torch.cat([user_embedded, movie_combined], dim=1)
+        combined = torch.cat([user_embedded, movie_embedded], dim=1)
 
         output = self.linear_relu_stack(combined)
 

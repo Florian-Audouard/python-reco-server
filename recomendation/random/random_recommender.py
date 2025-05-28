@@ -17,8 +17,8 @@ class RandomRecommender(Model):
     A simple recommendation model that returns random movies.
     """
 
-    def __init__(self, production=False, force_training=False):
-        super().__init__(production, force_training)
+    def __init__(self, production, force_training, noise=False, real_data=None):
+        super().__init__(production, force_training, noise=noise, real_data=real_data)
         self.filename = "random_recommender"
 
     def save(self):

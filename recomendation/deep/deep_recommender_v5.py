@@ -4,7 +4,6 @@ from sympy import plot
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from sentence_transformers import SentenceTransformer
 
 
 from torch.utils.data import DataLoader, Dataset
@@ -42,13 +41,6 @@ class DeepLearningRecommender(Model):
         """
         Initialize the data for training and validation.
         """
-        self.transformer = SentenceTransformer("all-MiniLM-L6-v2")
-        self.movies["plot_embedding"] = [
-            emb.cpu()
-            for emb in self.transformer.encode(
-                self.movies["plot"].tolist(), convert_to_tensor=True
-            )
-        ]
         self.torch_trainset = MovieLensDataset(self.trainset, self.movies)
         self.train_loader = DataLoader(
             self.torch_trainset,
@@ -73,11 +65,10 @@ class DeepLearningRecommender(Model):
                 user_ids = batch["users"].to(self.device)
                 movie_ids = batch["movies"].to(self.device)
                 ratings = batch["ratings"].to(self.device)
-                plot_embeddings = batch["plots"].to(self.device)
 
                 optimizer.zero_grad()
 
-                predictions = self.model(user_ids, movie_ids, plot_embeddings)
+                predictions = self.model(user_ids, movie_ids)
                 loss = criterion(predictions, ratings)
                 total_loss += loss.item()
                 loss.backward()
@@ -106,28 +97,19 @@ class DeepLearningRecommender(Model):
             raise ValueError(f"Unknown user ID: {user_id}")
 
         movie_indices = []
-        plot_embeddings = []
         for movie_id in candidates:
             movie_idx = self.torch_trainset.movie2idx.get(movie_id)
             if movie_idx is None:
                 raise ValueError(f"Unknown movie ID: {movie_id}")
             movie_indices.append(movie_idx)
 
-            emb = self.torch_trainset.movies_data.iloc[movie_idx]["plot_embedding"]
-            if isinstance(emb, torch.Tensor):
-                emb = emb.to(self.device)
-            else:
-                emb = torch.tensor(emb, device=self.device)
-            plot_embeddings.append(emb)
-
         user_tensor = torch.tensor(
             [user_idx] * len(movie_indices), dtype=torch.long
         ).to(self.device)
         movie_tensor = torch.tensor(movie_indices, dtype=torch.long).to(self.device)
-        plot_embeddings_tensor = torch.stack(plot_embeddings)
 
         with torch.no_grad():
-            predictions = self.model(user_tensor, movie_tensor, plot_embeddings_tensor)
+            predictions = self.model(user_tensor, movie_tensor)
 
         res = []
         for movie_id, prediction in zip(candidates, predictions):

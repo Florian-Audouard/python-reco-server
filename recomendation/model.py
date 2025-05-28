@@ -19,7 +19,9 @@ class Model(ABC):
 
     ERROR_MESSAGE = "Model not initialized or trained"
 
-    def __init__(self, production=False, force_training=False):
+    def __init__(
+        self, production=False, force_training=False, noise=False, real_data=None
+    ):
         """
         Initialize the model with default values.
         """
@@ -35,6 +37,8 @@ class Model(ABC):
         self.force_training = force_training
         self.production = production
         self.threshold = None
+        self.noise = noise
+        self.real_data = real_data
 
     def get_full_path(self):
         if self.filename is None:
@@ -127,7 +131,6 @@ class Model(ABC):
             self.ratings,
             test_size=0.2,
             random_state=3,
-            stratify=self.ratings.rating.values,
         )
         self.init_data_impl()
 
@@ -217,6 +220,23 @@ class Model(ABC):
 
     def get_pres_recall(self, user, note, top_n):
         candidates = self.validation_set[self.validation_set["userId"] == user]
+        if self.noise:
+            # Extraire les candidats (bruités)
+            candidates = candidates.copy()
+
+            # Extraire les vrais ratings pour cet utilisateur
+            true_ratings = self.real_data[self.real_data["userId"] == user][
+                ["movieId", "rating"]
+            ]
+            true_ratings = true_ratings.rename(columns={"rating": "true_rating"})
+
+            # Fusionner les deux sur movieId pour remplacer le rating
+            candidates = candidates.merge(true_ratings, on="movieId", how="left")
+
+            # Remplacer la colonne rating par la vraie
+            candidates["rating"] = candidates["true_rating"]
+            candidates.drop(columns=["true_rating"], inplace=True)
+
         relevant_items = set(
             candidates[candidates["rating"] >= note]["movieId"].unique()
         )

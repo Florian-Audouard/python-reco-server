@@ -11,8 +11,48 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")
 
 from utils.time_util import get_time_func
 
-URL_RATING = "http://quarkus-app:8080/rating/file"
-URL_MOVIE = "http://quarkus-app:8080/movie/file"
+HOST = "quarkus-app"
+
+
+def change_host(host):
+    """
+    Change the host for the URLs.
+
+    Args:
+        host (str): The new host to set.
+    """
+    global HOST
+    HOST = host
+
+
+def get_url_rating():
+    """
+    Get the URL for the rating service.
+
+    Returns:
+        str: The URL for the rating service.
+    """
+    return f"http://{HOST}:8080/rating/file"
+
+
+def get_url_rating_noise():
+    """
+    Get the URL for the noisy rating service.
+
+    Returns:
+        str: The URL for the noisy rating service.
+    """
+    return f"http://{HOST}:8080/rating/fileNoise"
+
+
+def get_url_movie():
+    """
+    Get the URL for the movie service.
+
+    Returns:
+        str: The URL for the movie service.
+    """
+    return f"http://{HOST}:8080/movie/file"
 
 
 FOLDER = "data"
@@ -66,8 +106,22 @@ def load_data_from_url():
     Load data from URLs in parallel threads.
     """
     with ThreadPoolExecutor(max_workers=2) as executor:
-        future_ratings = executor.submit(fetch_csv_from_url, URL_RATING)
-        future_movies = executor.submit(fetch_csv_from_url, URL_MOVIE)
+        future_ratings = executor.submit(fetch_csv_from_url, get_url_rating())
+        future_movies = executor.submit(fetch_csv_from_url, get_url_movie())
+
+        ratings = future_ratings.result()
+        movies = future_movies.result()
+    ratings = delete_unknow_movie_in_ratings(ratings, movies)
+    return ratings, movies
+
+
+def load_data_from_url_noise():
+    """
+    Load noisy data from URLs in parallel threads.
+    """
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        future_ratings = executor.submit(fetch_csv_from_url, get_url_rating_noise())
+        future_movies = executor.submit(fetch_csv_from_url, get_url_movie())
 
         ratings = future_ratings.result()
         movies = future_movies.result()

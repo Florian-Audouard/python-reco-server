@@ -26,8 +26,8 @@ class DeepLearningRecommender(Model):
     DeepLearningRecommender is a recommendation system model based on deep learning.
     """
 
-    def __init__(self, production, force_training):
-        super().__init__(production, force_training)
+    def __init__(self, production, force_training, noise=False, real_data=None):
+        super().__init__(production, force_training, noise=noise, real_data=real_data)
         self.model = None
         self.filename = "deep_recommender_model.h5"
         self.torch_trainset = None
