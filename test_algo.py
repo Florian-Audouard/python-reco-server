@@ -1,23 +1,22 @@
-import pandas as pd
 from concurrent.futures import ThreadPoolExecutor
+from recomendation.random.random_recommender import RandomRecommender
 from recomendation.svd.svd_recommender import SVDRecommender
-from recomendation.deep.deep_recommender_v6 import (
-    DeepLearningRecommender as DeepLearningRecommenderV6,
+from recomendation.deep.deep_recommender_v5 import (
+    DeepLearningRecommender as DeepLearningRecommenderV5,
 )
 from recomendation.preprocessing.movie_manipulation import (
     load_data_from_url,
     load_data_from_url_noise,
     change_host,
 )
-from io import StringIO
-import requests
+
 from utils.logger import log
 
 folder = "0.1"
 FORCE_TRAINING = True
 PRODUCTION = False
 
-ALGORITHM = DeepLearningRecommenderV6
+ALGORITHM = SVDRecommender
 
 change_host("localhost")
 

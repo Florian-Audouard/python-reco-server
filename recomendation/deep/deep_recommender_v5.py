@@ -9,10 +9,12 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
 import pandas as pd
 
-from MovieLensDataset import MovieLensDataset
-from RecommenderModel import RecommenderModel
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), ".")))
+
+from MovieLensDataset import MovieLensDataset
+from RecommenderModel import RecommenderModel
 
 from model import Model
 from preprocessing.movie_manipulation import load_data_from_file

@@ -8,11 +8,13 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
 import pandas as pd
 
-from RatingClassifier import RatingClassifier
-from RatingLabelDataset import RatingLabelDataset
+
 from tqdm import tqdm
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), ".")))
+from RatingClassifier import RatingClassifier
+from RatingLabelDataset import RatingLabelDataset
 
 from model import Model
 from preprocessing.movie_manipulation import load_data_from_file
@@ -34,7 +36,7 @@ class DeepLearningRecommender(Model):
         self.train_loader = None
         self.threshold = 3.5
         self.epochs = 5
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cpu")
 
     def init_data_impl(self):
         """
