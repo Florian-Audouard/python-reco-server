@@ -4,6 +4,7 @@ import pickle
 import random as rd
 import math
 import numpy as np
+import time
 
 try:
     from .dbscan_generation import dbscan_clustering
@@ -54,20 +55,10 @@ class DBSCANRecommender(Model):
         if self.model is None:
             raise RuntimeError(self.ERROR_MESSAGE)
         with open(self.get_full_path(), "wb") as f:
-<<<<<<< HEAD
-            pickle.dump(
-                {
-                    "model": self.model,
-                    "recommendable_movies": self.recommendable_movies,
-                },
-                f,
-            )
-=======
             pickle.dump({
                 "model": self.model,
                 "recommendable_movies": self.recommendable_movies
             }, f)
->>>>>>> 233d657fe7659e730bba1436b0af27dd7298a9f2
 
     def load_impl(self):
         os.makedirs(self.data_dir, exist_ok=True)
@@ -87,48 +78,9 @@ class DBSCANRecommender(Model):
 
         if not selected_list:
             return label, None, None, None
-<<<<<<< HEAD
-        else:
-
-            def generate_utility_value(movie):
-                average_rate = movie[1]
-                return (movie[0], math.exp(-0.2 * average_rate**2))
-
-            total_value = 0
-            probabilities = []
-
-            rd.shuffle(selected_list)
-            for index, movie in enumerate(selected_list):
-                movie_id, utility_value = generate_utility_value(movie)
-                total_value += utility_value
-                if index == 0:
-                    probabilities.append((movie_id, utility_value))
-                else:
-                    probabilities.append(
-                        (movie_id, utility_value + probabilities[index - 1][1])
-                    )
-
-            random_value = rd.uniform(0, total_value)
-            for index in range(len(probabilities)):
-                if random_value <= probabilities[index][1]:
-                    return label, selected_list, probabilities[index][0], index
-
-    def get_recommendations(self, user_id, top_n):
-        model_memory = copy.deepcopy(self.model)
-        selected_movies_id = []
-        all_movies_id = self.ratings["movieId"].unique()
-        if top_n > len(all_movies_id):
-            return all_movies_id
-        while len(selected_movies_id) < top_n and len(model_memory) > 0:
-            if len(model_memory) == 0:
-                break
-            label, selected_list, selected_movie, index_to_remove = (
-                self.get_select_random_movie(model_memory)
-            )
-=======
 
         # Utilité basée sur la moyenne
-        utilities = np.array([math.exp(-0.2 * movie[1] ** 2) for movie in selected_list])
+        utilities = np.array([math.exp(-0.01 * movie[1] ** 2) for movie in selected_list])
         probabilities = utilities / utilities.sum()
         idx = np.random.choice(len(selected_list), p=probabilities)
         selected_movie = selected_list[idx][0]
@@ -143,7 +95,6 @@ class DBSCANRecommender(Model):
             return all_movies_id.tolist()
         while len(selected_movies_id) < top_n and model_memory:
             label, selected_list, selected_movie, index_to_remove = self.get_select_random_movie(model_memory)
->>>>>>> 233d657fe7659e730bba1436b0af27dd7298a9f2
             if selected_list is None:
                 del model_memory[label]
                 continue
@@ -154,13 +105,8 @@ class DBSCANRecommender(Model):
         return selected_movies_id
 
     def init_data_impl(self):
-<<<<<<< HEAD
         return
-
-=======
-        self.training_impl()
     
->>>>>>> 233d657fe7659e730bba1436b0af27dd7298a9f2
     def predict(self, user_id, candidates):
         return
 
@@ -180,7 +126,7 @@ class DBSCANRecommender(Model):
         unknown_recommended_movies = len(not_watch_movies)
         return genre_diversity, unknown_recommended_movies
 
-    def accuracy(self, k=30):
+    def accuracy(self, k=20):
         if self.validation_set is None:
             raise RuntimeError("Validation set not initialized")
 
@@ -209,37 +155,70 @@ class DBSCANRecommender(Model):
         genre_diversity = []
         unknown_diversity = []
 
+        # Pour la répartition des clusters
+        clusters_per_user = []
+        cluster_count_global = {}
+
+        # Inverse l'indexation pour retrouver le cluster d'un film
+        movie_to_cluster = {}
+        for cluster_label, movie_list in self.model.items():
+            for movie_info in movie_list:
+                movie_id = movie_info[0]
+                movie_to_cluster[movie_id] = cluster_label
+
+        films_with_few_ratings_per_user = []
+
+        times = []
+
         for user_id in self.validation_set["userId"].unique():
-<<<<<<< HEAD
-
+            start = time.time()
             recommendations = self.get_recommendations(user_id, k)
-            genre_diversity_recommended, unknown_recommended_movies = (
-                self.get_diversity(recommendations)
-            )
-
-=======
-            recommendations = self.get_recommendations(user_id, k)
+            times.append(time.time() - start)
             genre_diversity_recommended, unknown_recommended_movies = self.get_diversity(recommendations)
->>>>>>> 233d657fe7659e730bba1436b0af27dd7298a9f2
             recommended_diversity.update(recommendations)
             genre_diversity.append(genre_diversity_recommended)
             unknown_diversity.append(unknown_recommended_movies)
 
+            clusters = set()
+            for movie_id in recommendations:
+                cluster = movie_to_cluster.get(movie_id)
+                if cluster is not None:
+                    clusters.add(cluster)
+                    cluster_count_global[cluster] = cluster_count_global.get(cluster, 0) + 1
+            clusters_per_user.append(len(clusters))
+            # Compte les films avec peu de notes dans les recommandations de cet utilisateur
+            count_few_ratings = 0
+            for movie_id in recommendations:
+                number_of_watch = self.ratings[self.ratings["movieId"] == movie_id]["rating"].count()
+                if number_of_watch <= self.limit_watch:
+                    count_few_ratings += 1
+            films_with_few_ratings_per_user.append(count_few_ratings)
+        mean_clusters_per_user = np.mean(clusters_per_user) if clusters_per_user else 0
+        mean_few_ratings_per_reco = np.mean(films_with_few_ratings_per_user) if films_with_few_ratings_per_user else 0
+
+        cluster_mean_ratings = {}
+        for cluster_label, movie_list in self.model.items():
+            ratings_list = []
+            for movie_info in movie_list:
+                movie_id = movie_info[0]
+                movie_ratings = self.ratings[self.ratings["movieId"] == movie_id]["rating"]
+                if not movie_ratings.empty:
+                    ratings_list.extend(movie_ratings.tolist())
+            if ratings_list:
+                cluster_mean_ratings[cluster_label] = np.mean(ratings_list)
+            else:
+                cluster_mean_ratings[cluster_label] = None  
+        mean_response_time = np.mean(times) if times else 0
         return {
-<<<<<<< HEAD
-            "mean genre diversity": sum(genre_diversity)
-            / (len(genre_diversity) * number_of_genre_in_db),
-            "mean genre inner diversity": sum(genre_diversity)
-            / (len(genre_diversity) * number_of_genre_in_recommendation),
-            "mean unknown selection": sum(unknown_diversity)
-            / (len(unknown_diversity) * number_of_unknown_movies),
-            "coverage": len(recommended_diversity) / number_of_movies,
-=======
+            "number of clusters": len(self.model),
             "mean genre diversity": sum(genre_diversity) / (len(genre_diversity)*number_of_genre_in_db) if number_of_genre_in_db else 0,
             "mean genre inner diversity": sum(genre_diversity) / (len(genre_diversity)*number_of_genre_in_recommendation) if number_of_genre_in_recommendation else 0,
-            "mean unknown selection": sum(unknown_diversity) / (len(unknown_diversity)*number_of_unknown_movies) if number_of_unknown_movies else 0,
-            "coverage": len(recommended_diversity) / number_of_movies if number_of_movies else 0
->>>>>>> 233d657fe7659e730bba1436b0af27dd7298a9f2
+            "mean unknown coverage": sum(unknown_diversity) / (len(unknown_diversity)*number_of_unknown_movies) if number_of_unknown_movies else 0,
+            "coverage": len(recommended_diversity) / number_of_movies if number_of_movies else 0,
+            "ratio film by user": len(recommended_diversity) / len(self.validation_set["userId"].unique()) if len(self.validation_set["userId"].unique()) else 0,
+            "mean clusters per user": mean_clusters_per_user,
+            "mean few ratings per reco": mean_few_ratings_per_reco,
+            "mean response time": mean_response_time,
         }
 
 
