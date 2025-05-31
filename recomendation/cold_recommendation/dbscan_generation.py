@@ -11,7 +11,7 @@ from collections import defaultdict
 scaler = StandardScaler()
 mlb = MultiLabelBinarizer()
 model = SentenceTransformer('all-MiniLM-L6-v2')
-reducer = umap.UMAP(n_components=200, n_neighbors=30, min_dist=0.1, metric='cosine', random_state=42)
+reducer = umap.UMAP(n_components=150, n_neighbors=30, min_dist=0.1, metric='cosine')
 
 def get_statistic_of_movie(ratings, movie_id):
     """
@@ -22,7 +22,7 @@ def get_statistic_of_movie(ratings, movie_id):
         movie_id (int): The movie ID.
 
     Returns:
-        list: [mean_rating or -1.0 if no ratings, number_of_watch]
+        list: [mean_rating or 0.0 if no ratings, number_of_watch]
     """
     mean = ratings[ratings["movieId"] == movie_id]["rating"].mean()
     number_of_watch = ratings[ratings["movieId"] == movie_id]["rating"].count()
@@ -60,7 +60,6 @@ def extract_data_and_movies_id(ratings, movies, recommendable_movies):
             continue
         statistics = get_statistic_of_movie(ratings, movie_id)
         data = np.concatenate([
-            np.array(statistics, dtype=np.float32),
             descriptions[idx],
             genre_vector[movie_id],
             np.array([row.year, row.month, row.day], dtype=np.float32)
