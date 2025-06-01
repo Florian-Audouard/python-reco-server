@@ -25,8 +25,6 @@ class DBSCANRecommender(Model):
         super().__init__(production, force_training, noise=noise, real_data=real_data)
         self.model = None
         self.filename = "dbscan_model_and_data.pkl"
-        self.movieId_to_idx = None
-        self.idx_to_movieId = None
 
         self.limit_watch = 0
         self.limit_rate = 3
